@@ -1,3 +1,6 @@
+import requests
+import pandas as pd
+import yfinance as yf
 import streamlit as st
 from streamlit_login_auth_ui.widgets import __login__
 
@@ -27,9 +30,13 @@ if LOGGED_IN:
         Welcome to the Portfolio Goals page! Here, you can define your investment objectives and preferences.
         Please fill out the following fields to help us tailor investment recommendations for you.
         """)
-        
-        goal = st.text_input("Goal", value="", type="default")
-        risk_tolerance = st.slider('Risk Tolerance', 0, 10, 5)
+
+        # Goal
+        st.subheader("Goal")        
+        goal = st.text_input("What is your investmentent goal?", value="", type="default")
+
+        # stocks of interest
+        st.subheader("Stocks of interest")
         option = st.multiselect(
             'What stocks are you interested in?',
             ('Google', 'Apple', 'Nvidia'))
@@ -83,6 +90,25 @@ if LOGGED_IN:
             'Recommendation',
             'Management of portfolio'])
         with tab1:
+            # # Function to fetch news from NewsAPI
+            # def get_financial_news(api_key='1ced749db7134f5684df1227101cd72f', language='en', category='business'):
+            #     base_url = "https://newsapi.org/v2/top-headlines"
+            #     params = {
+            #         'language': language,
+            #         'category': category,
+            #         'apiKey': api_key
+            #     }
+            #     response = requests.get(base_url, params=params)
+            #     news_data = response.json()
+            #     return news_data['articles']
+            
+            # # Fetch news on page load
+            # articles = get_financial_news()
+
+            # for article in articles:
+            #     st.subheader(article['title'])
+            #     st.write(article['description'])
+            #     st.markdown(f"[Read More]({article['url']})", unsafe_allow_html=True)
             pass
         with tab2:
             pass
@@ -94,4 +120,4 @@ if LOGGED_IN:
             pass
 
 else:
-    st.warning("Please log in to access Finance Adviser.")        
+    st.warning("Please log in to access Finance Adviser.")
