@@ -2,6 +2,8 @@ import requests
 import pandas as pd
 import yfinance as yf
 import streamlit as st
+from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 from streamlit_login_auth_ui.widgets import __login__
 
 st.set_page_config(page_title="Finance Adviser")
@@ -83,14 +85,49 @@ if LOGGED_IN:
         form_placeholder.empty()
 
         # Display the tabs after form submission
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+            'New',
             'Market analysis',
             'Trading simulator',
             'Reading resources',
             'Recommendation',
             'Management of portfolio'])
         with tab1:
-            # # Function to fetch news from NewsAPI
+            @st.cache_data
+            def get_news():
+                link_list = []
+                headline_list = []
+                url = 'https://www.cnbc.com/world-markets/'
+                get_url = requests.get(url)
+                soup = BeautifulSoup(get_url.text, "html.parser")
+                links = [link.get('href') for link in soup.find_all('a')]
+                links = [link for link in links if link and link.startswith('https://www.cnbc.com/2024/')]
+                # Function to normalize URLs for comparison
+                def normalize_url(url):
+                    parsed_url = urlparse(url)
+                    return parsed_url.geturl()
+
+                links = list(set(normalize_url(link) for link in links))
+  
+                for link in links:
+                    get_url = requests.get(link)
+                    soup = BeautifulSoup(get_url.text, "html.parser")
+                    headline = soup.select('h1.ArticleHeader-headline')
+                    if len(headline) > 0:
+                        headline = headline[0].get_text()
+                        link_list.append(link)
+                        headline_list.append(headline)
+                        zipped_list = zip(link_list, headline_list)
+                return zipped_list
+
+            news = get_news()
+            st.subheader("News")
+            for link, headline in news:
+                styled_link = f'<a href="{link}" style="font-size: 25px;">{headline}</a>'
+                st.markdown(styled_link, unsafe_allow_html=True)
+                st.write("")
+
+                 # # Function to fetch news from NewsAPI
             # def get_financial_news(api_key='1ced749db7134f5684df1227101cd72f', language='en', category='business'):
             #     base_url = "https://newsapi.org/v2/top-headlines"
             #     params = {
@@ -109,9 +146,24 @@ if LOGGED_IN:
             #     st.subheader(article['title'])
             #     st.write(article['description'])
             #     st.markdown(f"[Read More]({article['url']})", unsafe_allow_html=True)
-            pass
+
         with tab2:
-            pass
+            st.subheader('Realtime Stock Monitoring')
+            ticker = st.selectbox('Select a stock ticker', ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS', 'BABA', 'WMT', 'PG'])
+            # Fetch real-time stock data
+            @st.cache_data
+            def get_data(ticker):
+                data = yf.download(ticker, period="1y", interval="1d")
+                return data
+
+            # Display the stock data
+            def display_data():
+                data = get_data(ticker)
+                st.write(f"Daily Close Price of {ticker} [Last 365 Days]")
+                st.line_chart(data['Close'])
+            if ticker:
+                display_data()
+            #pass
         with tab3:
             pass
         with tab4:
