@@ -43,7 +43,7 @@ if LOGGED_IN:
     form_placeholder = st.empty()  # Create a placeholder for the form
 
     # Display the form only if it hasn't been submitted
-    if not st.session_state.get('form_submitted', False):
+    if not st.session_state.get('form_submitted', False): #session_state is used to save the data fro the session because of streamlit 
         with form_placeholder.form("Question"):
             # Introduction
             st.write(
