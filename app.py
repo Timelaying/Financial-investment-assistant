@@ -43,7 +43,7 @@ if LOGGED_IN:
     form_placeholder = st.empty()  # Create a placeholder for the form
 
     # Display the form only if it hasn't been submitted
-    if not st.session_state.get('form_submitted', False): #session_state is used to save the data fro the session because of streamlit 
+    if not st.session_state.get('form_submitted', False):
         with form_placeholder.form("Question"):
             # Introduction
             st.write(
@@ -291,6 +291,12 @@ if LOGGED_IN:
                             df.loc[df['Volume SMA50'] < df['Volume SMA200'], 'Increasing/Decreasing Volume'] = 'Decreasing Volume'
                             df.loc[~((df['Volume SMA50'] > df['Volume SMA200']) | (df['Volume SMA50'] < df['Volume SMA200'])), 'Increasing/Decreasing Volume'] = 'Stable Volume'
 
+                            # For demonstration purposes, let's assume simple moving averages on volume data
+                            df['Volume SMA20'] = df['Volume'].rolling(window=20).mean()
+                            df['Volume SMA50'] = df['Volume'].rolling(window=50).mean()
+                            df['Volume Support'] = df['Volume SMA20'] * 0.95  # Support level at 95% of SMA20
+                            df['Volume Resistance'] = df['Volume SMA50'] * 1.05  # Resistance level at 105% of SMA50
+
 
 
                         # On-Balance Volume recommendation with investment horizon context
@@ -343,6 +349,13 @@ if LOGGED_IN:
                             df.loc[buy_condition, 'Support Resistance'] = 'Buy'
                             df.loc[sell_condition, 'Support Resistance'] = 'Sell'
                             df.loc[~(buy_condition | sell_condition), 'Support Resistance'] = 'Hold'
+
+                            #Extra Complexity for support
+                             # For demonstration purposes, let's assume simple moving averages on price data
+                            df['SMA20'] = df['Close'].rolling(window=20).mean()
+                            df['SMA50'] = df['Close'].rolling(window=50).mean()
+                            df['Support'] = df['SMA20'] * 0.95  # Support level at 95% of SMA20
+                            df['Resistance'] = df['SMA50'] * 1.05  # Resistance level at 105% of SMA50
 
                          # Function to generate recommendations
                         def generate_recommendations(df, risk_tolerance, investment_horizon, investment_style):
