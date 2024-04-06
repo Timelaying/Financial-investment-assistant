@@ -234,6 +234,9 @@ if LOGGED_IN:
 
                         # Bollinger Bands recommendation with investment style context
                         def Bollinger_Bands(df, investment_style):
+                            df['Middle Band'] = ta.volatility.bollinger_mavg(df.Close)
+                            df['Upper Band'], df['Lower Band'] = ta.volatility.bollinger_hband(df.Close), ta.volatility.bollinger_lband(df.Close)
+
                             if investment_style == "Value Investing":
                                 buy_condition = df.Close < df['Lower Band']
                                 sell_condition = df.Close > df['Upper Band']
@@ -244,8 +247,7 @@ if LOGGED_IN:
                                 buy_condition = False
                                 sell_condition = False
 
-                            df['Middle Band'] = ta.volatility.bollinger_mavg(df.Close)
-                            df['Upper Band'], df['Lower Band'] = ta.volatility.bollinger_hband(df.Close), ta.volatility.bollinger_lband(df.Close)
+                            
                             df.loc[buy_condition, 'Bollinger Bands'] = 'Buy'
                             df.loc[sell_condition, 'Bollinger Bands'] = 'Sell'
                             df.loc[~(buy_condition | sell_condition), 'Bollinger Bands'] = 'Hold'
@@ -268,6 +270,10 @@ if LOGGED_IN:
 
                         # On-Balance Volume recommendation with investment horizon context
                         def On_Balance_Volume(df, investment_horizon):
+                            df['OBV'] = ta.volume.on_balance_volume(df.Close, df.Volume)
+                            df['OBV Change'] = df['OBV'].diff()
+                            df['OBV'] = df['OBV'].astype('object')
+
                             if investment_horizon == "Short-term - 1 to 3 years":
                                 buy_condition = df['OBV Change'] > 0
                                 sell_condition = df['OBV Change'] < 0
@@ -287,6 +293,9 @@ if LOGGED_IN:
 
                         # Support and Resistance Levels recommendation with investment horizon context
                         def Support_Resistance_Levels(df, investment_horizon):
+                            df['Support Level'] = df['Low'].rolling(window=20).min()
+                            df['Resistance Level'] = df['High'].rolling(window=20).max()
+                            
                             if investment_horizon == "Short-term - 1 to 3 years":
                                 buy_condition = df.Close > df['Support Level']
                                 sell_condition = df.Close < df['Resistance Level']
@@ -319,19 +328,22 @@ if LOGGED_IN:
                                                 st.session_state.form_data['investment_style'])
 
                         st.success("Recommendations generated successfully!")
+
+                        # Display the results DataFrame
+                        st.subheader("Results")
+                        st.write('1. Full details')
+                        st.write(df)
+                        st.write('2. Summary')
+                        summarized_results = df[['Decision MACD', 'Decision RSI/SMA', 'Bollinger Bands', 'Volume Analysis',
+                                                        'OBV', 'Support Resistance']]
+                        st.write(summarized_results)
+
                     except Exception as e:
                             st.error(f"An error occurred: {str(e)}")
 
-                    # Display the results DataFrame
-                    st.subheader("Results")
-                    show_summary = st.checkbox("Show Summary")
-                    if show_summary:
-                        summarized_results = df[['Decision MACD', 'Decision RSI/SMA', 'Bollinger Bands', 'Volume Analysis',
-                                                'OBV', 'Support Resistance']]
-                        st.write(summarized_results)
-                    else:
-                        st.write(df)
-
+                    
+                    
+                            
                     # Compute recommendation counts
                     recommendation_counts = df[['Decision MACD', 'Decision RSI/SMA', 'Bollinger Bands', 'Volume Analysis', 'OBV', 'Support Resistance']].apply(pd.Series.value_counts)
 
