@@ -237,6 +237,10 @@ if LOGGED_IN:
                             df['Middle Band'] = ta.volatility.bollinger_mavg(df.Close)
                             df['Upper Band'], df['Lower Band'] = ta.volatility.bollinger_hband(df.Close), ta.volatility.bollinger_lband(df.Close)
 
+                            # Determine overbought and oversold conditions
+                            df.loc[(df.Close > df['Upper Band']), 'Bollinger Bands'] = 'Overbought'
+                            df.loc[(df.Close < df['Lower Band']), 'Bollinger Bands'] = 'Oversold'
+
                             if investment_style == "Value Investing":
                                 buy_condition = df.Close < df['Lower Band']
                                 sell_condition = df.Close > df['Upper Band']
@@ -247,13 +251,26 @@ if LOGGED_IN:
                                 buy_condition = False
                                 sell_condition = False
 
-                            
+                            # Apply buy, sell, and hold labels based on investment style
                             df.loc[buy_condition, 'Bollinger Bands'] = 'Buy'
                             df.loc[sell_condition, 'Bollinger Bands'] = 'Sell'
                             df.loc[~(buy_condition | sell_condition), 'Bollinger Bands'] = 'Hold'
 
+                            # Add another column to explicitly indicate overbought or oversold
+                            df['Overbought/Oversold'] = ''
+                            df.loc[(df.Close > df['Upper Band']), 'Overbought/Oversold'] = 'Overbought'
+                            df.loc[(df.Close < df['Lower Band']), 'Overbought/Oversold'] = 'Oversold'
+
+
                         # Volume Analysis recommendation with risk tolerance context
                         def Volume_Analysis(df, risk_tolerance):
+                            df['Volume SMA50'] = df['Volume'].rolling(window=50).mean()
+                            df['Volume SMA200'] = df['Volume'].rolling(window=200).mean()
+                            df.loc[df['Volume SMA50'] > df['Volume SMA200'], 'Volume Analysis'] = 'Increasing Volume'
+                            df.loc[df['Volume SMA50'] < df['Volume SMA200'], 'Volume Analysis'] = 'Decreasing Volume'
+                            df.loc[~((df['Volume SMA50'] > df['Volume SMA200']) | (df['Volume SMA50'] < df['Volume SMA200'])), 'Volume Analysis'] = 'Stable Volume'
+
+
                             if risk_tolerance == "High":
                                 volume_threshold = 0.3
                             elif risk_tolerance == "Medium":
@@ -268,28 +285,42 @@ if LOGGED_IN:
                             df.loc[~((df['Volume SMA50'] > df['Volume SMA200'] * (1 + volume_threshold)) |
                                     (df['Volume SMA50'] < df['Volume SMA200'] * (1 - volume_threshold))), 'Volume Analysis'] = 'Hold'
 
+                            # Add another column to explicitly indicate increasing or decreasing volume
+                            df['Increasing/Decreasing Volume'] = ''
+                            df.loc[df['Volume SMA50'] > df['Volume SMA200'], 'Increasing/Decreasing Volume'] = 'Increasing Volume'
+                            df.loc[df['Volume SMA50'] < df['Volume SMA200'], 'Increasing/Decreasing Volume'] = 'Decreasing Volume'
+                            df.loc[~((df['Volume SMA50'] > df['Volume SMA200']) | (df['Volume SMA50'] < df['Volume SMA200'])), 'Increasing/Decreasing Volume'] = 'Stable Volume'
+
+
+
                         # On-Balance Volume recommendation with investment horizon context
                         def On_Balance_Volume(df, investment_horizon):
-                            df['OBV'] = ta.volume.on_balance_volume(df.Close, df.Volume)
-                            df['OBV Change'] = df['OBV'].diff()
-                            df['OBV'] = df['OBV'].astype('object')
+                            if not df.empty:
+                                df['OBV'] = ta.volume.on_balance_volume(df.Close, df.Volume)
+                                df['OBV Change'] = df['OBV'].diff()
+                                df['OBV'] = df['OBV'].astype('object')
 
-                            if investment_horizon == "Short-term - 1 to 3 years":
-                                buy_condition = df['OBV Change'] > 0
-                                sell_condition = df['OBV Change'] < 0
-                            elif investment_horizon == "Medium-term - 3 to 5 years":
-                                buy_condition = df['OBV Change'] > 0
-                                sell_condition = df['OBV Change'] < 0
-                            elif investment_horizon == "Long-term - 5 years or more":
-                                buy_condition = df['OBV Change'] > 0
-                                sell_condition = df['OBV Change'] < 0
-                            else:
-                                buy_condition = False
-                                sell_condition = False
+                                if investment_horizon == "Short-term - 1 to 3 years":
+                                    buy_condition = df['OBV Change'] > 0
+                                    sell_condition = df['OBV Change'] < 0
+                                elif investment_horizon == "Medium-term - 3 to 5 years":
+                                    buy_condition = df['OBV Change'] > 0
+                                    sell_condition = df['OBV Change'] < 0
+                                elif investment_horizon == "Long-term - 5 years or more":
+                                    buy_condition = df['OBV Change'] > 0
+                                    sell_condition = df['OBV Change'] < 0
+                                else:
+                                    buy_condition = False
+                                    sell_condition = False
 
-                            df.loc[buy_condition, 'OBV'] = 'Buy'
-                            df.loc[sell_condition, 'OBV'] = 'Sell'
-                            df.loc[~(buy_condition | sell_condition), 'OBV'] = 'Hold'
+                                df.loc[buy_condition, 'OBV'] = 'Buy'
+                                df.loc[sell_condition, 'OBV'] = 'Sell'
+                                df.loc[~(buy_condition | sell_condition), 'OBV'] = 'Hold'
+
+                                # Add another column to explicitly indicate OBV change
+                                df['OBV Change Direction'] = ''
+                                df.loc[df['OBV Change'] > 0, 'OBV Change Direction'] = 'Bullish'
+                                df.loc[df['OBV Change'] < 0, 'OBV Change Direction'] = 'Bearish'
 
                         # Support and Resistance Levels recommendation with investment horizon context
                         def Support_Resistance_Levels(df, investment_horizon):
