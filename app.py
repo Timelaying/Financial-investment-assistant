@@ -1,14 +1,20 @@
+# Importing necessary libraries
 import requests
+import pandas_ta
+import ta
 import pandas as pd
 import yfinance as yf
 import streamlit as st
+import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from streamlit_login_auth_ui.widgets import __login__
 
+# Set page configuration and header
 st.set_page_config(page_title="Finance Adviser")
 st.header("Finance Adviser")
 
+# Authenticate user
 __login__obj = __login__(
     auth_token="pk_prod_0PP3FYA7VXMJ3EKZNB7R7SKWFWHR",  # st.secrets.email_api_key
     company_name="Finance Adviser",
@@ -16,9 +22,9 @@ __login__obj = __login__(
     logout_button_name='Logout', hide_menu_bool=False,
     hide_footer_bool=False,
     lottie_url='https://assets2.lottiefiles.com/packages/lf20_jcikwtux.json')
-
 LOGGED_IN = __login__obj.build_login_ui()
 
+# Main application logic
 if LOGGED_IN:
     # Check if form data exists in session state
     if 'form_data' not in st.session_state:
@@ -48,7 +54,8 @@ if LOGGED_IN:
 
             # Goal
             st.subheader("Goal")
-            st.session_state.form_data['goal'] = st.text_input("What is your investment goal?", value=st.session_state.form_data['goal'], type="default")
+            st.session_state.form_data['goal'] = st.text_input("What is your investment goal?",
+                                                                value=st.session_state.form_data['goal'], type="default")
 
             # Stocks of interest
             st.subheader("Stocks of interest")
@@ -60,7 +67,9 @@ if LOGGED_IN:
             # Risk Tolerance
             st.subheader("Risk Tolerance")
             risk_tolerance_options = ["Low", "Medium", "High"]
-            risk_tolerance_index = risk_tolerance_options.index(st.session_state.form_data['risk_tolerance']) if st.session_state.form_data['risk_tolerance'] in risk_tolerance_options else 1
+            risk_tolerance_index = risk_tolerance_options.index(
+                st.session_state.form_data['risk_tolerance']) if st.session_state.form_data[
+                'risk_tolerance'] in risk_tolerance_options else 1
             st.session_state.form_data['risk_tolerance'] = st.selectbox(
                 "Select your risk tolerance",
                 risk_tolerance_options,
@@ -68,8 +77,11 @@ if LOGGED_IN:
 
             # Investment horizon
             st.subheader("Investment Horizon")
-            investment_horizon_options = ["Short-term - 1 to 3 years", "Medium-term - 3 to 5 years", "Long-term - 5 years or more"]
-            investment_horizon_index = investment_horizon_options.index(st.session_state.form_data['investment_horizon']) if st.session_state.form_data['investment_horizon'] in investment_horizon_options else 1
+            investment_horizon_options = ["Short-term - 1 to 3 years", "Medium-term - 3 to 5 years",
+                                          "Long-term - 5 years or more"]
+            investment_horizon_index = investment_horizon_options.index(
+                st.session_state.form_data['investment_horizon']) if st.session_state.form_data[
+                'investment_horizon'] in investment_horizon_options else 1
             st.session_state.form_data['investment_horizon'] = st.selectbox(
                 "Select your investment horizon",
                 investment_horizon_options,
@@ -93,7 +105,9 @@ if LOGGED_IN:
             # Investment style
             st.subheader("Investment Style")
             investment_style_options = ["Value Investing", "Growth Investing", "Index Investing"]
-            investment_style_index = investment_style_options.index(st.session_state.form_data['investment_style']) if st.session_state.form_data['investment_style'] in investment_style_options else 1
+            investment_style_index = investment_style_options.index(
+                st.session_state.form_data['investment_style']) if st.session_state.form_data[
+                'investment_style'] in investment_style_options else 1
             st.session_state.form_data['investment_style'] = st.radio(
                 "Select your investment style",
                 investment_style_options,
@@ -152,7 +166,9 @@ if LOGGED_IN:
 
     with tab2:
         st.subheader('Realtime Stock Monitoring')
-        ticker = st.selectbox('Select a stock ticker', ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS', 'BABA', 'WMT', 'PG'])
+        ticker = st.selectbox('Select a stock ticker',
+                              ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS',
+                               'BABA', 'WMT', 'PG'])
         # Fetch real-time stock data
         @st.cache_data
         def get_data(ticker):
@@ -167,12 +183,171 @@ if LOGGED_IN:
 
         if ticker:
             display_data()
-            #pass
+            # pass
         with tab3:
             pass
         with tab4:
             pass
         with tab5:
+            st.subheader("Recommendation Results")
+
+            df = pd.DataFrame()
+            ticker2 = st.selectbox('Select a stock ticker',
+                                ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS',
+                                    'BABA', 'WMT', 'PG'], key = 't2')
+            period = st.selectbox('Select the period for stock data', ['1mo', '3mo', '6mo', '1y'], key = 'p')
+            interval = st.selectbox('Select the interval for stock data', ['1h', '1d'], key='i')
+
+            if st.button("Generate Recommendations"):
+                with st.spinner("Fetching and processing data..."):
+                    try:
+                        df = df.ta.ticker(ticker2, period=period, interval=interval)
+
+                        # Recommendation of Stock using MACD with risk tolerance context
+                        def MACDdecision(df, risk_tolerance):
+                            if risk_tolerance == "High":
+                                threshold = 0.2
+                            elif risk_tolerance == "Medium":
+                                threshold = 0.1
+                            else:
+                                threshold = 0
+
+                            df['MACD_diff'] = ta.trend.macd_diff(df.Close)
+                            df.loc[(df.MACD_diff > threshold) & (df.MACD_diff.shift(1) < threshold), 'Decision MACD'] = 'Buy'
+                            df.loc[~(df.MACD_diff > threshold) & (df.MACD_diff.shift(1) < threshold), 'Decision MACD'] = 'Don\'t Buy'
+
+                        # Recommendation of Stock using RSI and SMA with investment horizon context
+                        def RSI_SMAdecision(df, investment_horizon):
+                            if investment_horizon == "Short-term - 1 to 3 years":
+                                RSI_threshold = 30
+                            elif investment_horizon == "Medium-term - 3 to 5 years":
+                                RSI_threshold = 40
+                            elif investment_horizon == "Long-term - 5 years or more":
+                                RSI_threshold = 50
+                            else:
+                                RSI_threshold = 0
+
+                            df['RSI'] = ta.momentum.rsi(df.Close, window=10)
+                            df['SMA200'] = ta.trend.sma_indicator(df.Close, window=200)
+                            df.loc[(df.Close > df.SMA200) & (df.RSI < RSI_threshold), 'Decision RSI/SMA'] = 'Buy'
+                            df.loc[~((df.Close > df.SMA200) & (df.RSI < RSI_threshold)), 'Decision RSI/SMA'] = 'Don\'t Buy'
+
+                        # Bollinger Bands recommendation with investment style context
+                        def Bollinger_Bands(df, investment_style):
+                            if investment_style == "Value Investing":
+                                buy_condition = df.Close < df['Lower Band']
+                                sell_condition = df.Close > df['Upper Band']
+                            elif investment_style == "Growth Investing":
+                                buy_condition = df.Close > df['Upper Band']
+                                sell_condition = df.Close < df['Lower Band']
+                            else:
+                                buy_condition = False
+                                sell_condition = False
+
+                            df['Middle Band'] = ta.volatility.bollinger_mavg(df.Close)
+                            df['Upper Band'], df['Lower Band'] = ta.volatility.bollinger_hband(df.Close), ta.volatility.bollinger_lband(df.Close)
+                            df.loc[buy_condition, 'Bollinger Bands'] = 'Buy'
+                            df.loc[sell_condition, 'Bollinger Bands'] = 'Sell'
+                            df.loc[~(buy_condition | sell_condition), 'Bollinger Bands'] = 'Hold'
+
+                        # Volume Analysis recommendation with risk tolerance context
+                        def Volume_Analysis(df, risk_tolerance):
+                            if risk_tolerance == "High":
+                                volume_threshold = 0.3
+                            elif risk_tolerance == "Medium":
+                                volume_threshold = 0.2
+                            else:
+                                volume_threshold = 0.1
+
+                            df['Volume SMA50'] = df['Volume'].rolling(window=50).mean()
+                            df['Volume SMA200'] = df['Volume'].rolling(window=200).mean()
+                            df.loc[df['Volume SMA50'] > df['Volume SMA200'] * (1 + volume_threshold), 'Volume Analysis'] = 'Buy'
+                            df.loc[df['Volume SMA50'] < df['Volume SMA200'] * (1 - volume_threshold), 'Volume Analysis'] = 'Sell'
+                            df.loc[~((df['Volume SMA50'] > df['Volume SMA200'] * (1 + volume_threshold)) |
+                                    (df['Volume SMA50'] < df['Volume SMA200'] * (1 - volume_threshold))), 'Volume Analysis'] = 'Hold'
+
+                        # On-Balance Volume recommendation with investment horizon context
+                        def On_Balance_Volume(df, investment_horizon):
+                            if investment_horizon == "Short-term - 1 to 3 years":
+                                buy_condition = df['OBV Change'] > 0
+                                sell_condition = df['OBV Change'] < 0
+                            elif investment_horizon == "Medium-term - 3 to 5 years":
+                                buy_condition = df['OBV Change'] > 0
+                                sell_condition = df['OBV Change'] < 0
+                            elif investment_horizon == "Long-term - 5 years or more":
+                                buy_condition = df['OBV Change'] > 0
+                                sell_condition = df['OBV Change'] < 0
+                            else:
+                                buy_condition = False
+                                sell_condition = False
+
+                            df.loc[buy_condition, 'OBV'] = 'Buy'
+                            df.loc[sell_condition, 'OBV'] = 'Sell'
+                            df.loc[~(buy_condition | sell_condition), 'OBV'] = 'Hold'
+
+                        # Support and Resistance Levels recommendation with investment horizon context
+                        def Support_Resistance_Levels(df, investment_horizon):
+                            if investment_horizon == "Short-term - 1 to 3 years":
+                                buy_condition = df.Close > df['Support Level']
+                                sell_condition = df.Close < df['Resistance Level']
+                            elif investment_horizon == "Medium-term - 3 to 5 years":
+                                buy_condition = df.Close > df['Support Level']
+                                sell_condition = df.Close < df['Resistance Level']
+                            elif investment_horizon == "Long-term - 5 years or more":
+                                buy_condition = df.Close > df['Support Level']
+                                sell_condition = df.Close < df['Resistance Level']
+                            else:
+                                buy_condition = False
+                                sell_condition = False
+
+                            df.loc[buy_condition, 'Support Resistance'] = 'Buy'
+                            df.loc[sell_condition, 'Support Resistance'] = 'Sell'
+                            df.loc[~(buy_condition | sell_condition), 'Support Resistance'] = 'Hold'
+
+                         # Function to generate recommendations
+                        def generate_recommendations(df, risk_tolerance, investment_horizon, investment_style):
+                            MACDdecision(df, risk_tolerance)
+                            RSI_SMAdecision(df, investment_horizon)
+                            Bollinger_Bands(df, investment_style)
+                            Volume_Analysis(df, risk_tolerance)
+                            On_Balance_Volume(df, investment_horizon)
+                            Support_Resistance_Levels(df, investment_horizon)
+
+                        # Call the recommendation function with parameters
+                        generate_recommendations(df, st.session_state.form_data['risk_tolerance'],
+                                                st.session_state.form_data['investment_horizon'],
+                                                st.session_state.form_data['investment_style'])
+
+                        st.success("Recommendations generated successfully!")
+                    except Exception as e:
+                            st.error(f"An error occurred: {str(e)}")
+
+                    # Display the results DataFrame
+                    st.subheader("Results")
+                    show_summary = st.checkbox("Show Summary")
+                    if show_summary:
+                        summarized_results = df[['Decision MACD', 'Decision RSI/SMA', 'Bollinger Bands', 'Volume Analysis',
+                                                'OBV', 'Support Resistance']]
+                        st.write(summarized_results)
+                    else:
+                        st.write(df)
+
+                    # Compute recommendation counts
+                    recommendation_counts = df[['Decision MACD', 'Decision RSI/SMA', 'Bollinger Bands', 'Volume Analysis', 'OBV', 'Support Resistance']].apply(pd.Series.value_counts)
+
+                    # Plot recommendation counts
+                    plt.figure(figsize=(10, 6))
+                    recommendation_counts.plot(kind='bar', stacked=True)
+                    plt.title('Recommendation Counts by Indicator')
+                    plt.xlabel('Recommendation Type')
+                    plt.ylabel('Count')
+                    plt.xticks(rotation=45)
+                    plt.legend(title='Indicator')
+                    plt.tight_layout()
+                    st.pyplot(plt)
+
+
+        with tab6:
             pass
 
 else:
