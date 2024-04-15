@@ -1,6 +1,7 @@
 # Importing necessary libraries
 import requests
 import pandas_ta
+import pypfopt
 import ta
 import numpy as np
 import plotly.graph_objs as go
@@ -8,6 +9,8 @@ import pandas as pd
 import yfinance as yf
 import streamlit as st
 import matplotlib.pyplot as plt
+import plotly.graph_objs as go
+from datetime import datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from streamlit_login_auth_ui.widgets import __login__
@@ -15,6 +18,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.ensemble import RandomForestClassifier  #more resistant to over fitting
+from pypfopt import EfficientFrontier, risk_models, expected_returns
+
 
 
 
@@ -352,7 +357,64 @@ if LOGGED_IN:
 
             #pass
     with tab4:
-            pass
+        st.title("Reading Resources")
+
+        st.write("""
+        Welcome to the Reading Resources section! Here, you can find various educational materials to enhance your understanding of investment fundamentals and make informed decisions.
+        """)
+
+        st.subheader("Educational Articles")
+        with st.expander("📚 Click to view articles"):
+            st.markdown("""
+            - [Introduction to Investing](https://www.investopedia.com/articles/investing/082614/how-stock-market-works.asp): Learn the basics of the stock market and how it operates.
+            - [Understanding Stocks](https://www.nerdwallet.com/article/investing/what-are-stocks): Discover what stocks are and how they work as investment vehicles.
+            - [Guide to Mutual Funds](https://www.sec.gov/reportspubs/investor-publications/investorpubsmfintrohtm.html): Get insights into mutual funds and how to invest in them.
+            - [Basics of Bonds](https://www.investor.gov/introduction-investing/basics/investment-products/bonds-or-fixed-income-products): Understand the fundamentals of bonds and fixed-income products.
+            - [ETFs vs. Mutual Funds](https://www.investor.gov/introduction-investing/basics/investment-products/mutual-funds-and-etfs): Learn about the differences between ETFs and mutual funds.
+            - [Diversification: A Risk Management Strategy](https://www.sec.gov/reportspubs/investor-publications/investorpubsdiversificationhtm.html): Explore the concept of diversification as a risk management strategy.
+            """)
+
+        st.subheader("Video Tutorials")
+        with st.expander("🎥 Click to watch tutorials"):
+            st.markdown("""
+            - [Investing for Beginners](https://www.youtube.com/watch?v=F3QpgXBtDeo): Beginner-friendly tutorial on investing principles.
+            - [How to Choose Stocks](https://www.youtube.com/watch?v=fi7Km2zFfLk): Guidance on selecting stocks for investment.
+            - [Understanding Mutual Funds](https://www.youtube.com/watch?v=2JCYn4CUEQ4): Video explaining mutual funds and their benefits.
+            - [Introduction to Bonds](https://www.youtube.com/watch?v=iTAK3Rt1R1k): Introduction to bonds and bond investing.
+            - [Value Investing Principles](https://www.youtube.com/watch?v=crI4KRqYttM): Learn about value investing strategies.
+            - [Risk Management Strategies](https://www.youtube.com/watch?v=K6fCnXJ2F24): Explore different risk management techniques for investments.
+            """)
+
+        st.subheader("Podcasts")
+        with st.expander("🎧 Click to listen to podcasts"):
+            st.markdown("""
+            - [InvestED Podcast](https://www.ruleoneinvesting.com/podcast/): Dive deep into investing with insights from experienced investors.
+            - [The Investor's Podcast Network](https://www.theinvestorspodcast.com/): Network of podcasts covering various investment topics.
+            - [The Motley Fool Podcasts](https://www.fool.com/podcasts/): Listen to discussions on finance and investing by Motley Fool experts.
+            - [We Study Billionaires](https://www.theinvestorspodcast.com/): Podcast focused on billionaire investors and their strategies.
+            - [Market Foolery](https://www.fool.com/podcasts/marketfoolery/): Stay updated on market news and analysis with this podcast.
+            """)
+
+        st.subheader("Recommended Books")
+        with st.expander("📖 Click to view recommended books"):
+            st.markdown("""
+            - "The Intelligent Investor" by Benjamin Graham: Classic book on value investing principles.
+            - "A Random Walk Down Wall Street" by Burton G. Malkiel: Insights into efficient market theory and investment strategies.
+            - "The Little Book of Common Sense Investing" by John C. Bogle: Guide to passive investing and index funds.
+            - "The Essays of Warren Buffett: Lessons for Corporate America" by Warren Buffett: Learn from the legendary investor's wisdom.
+            - "Common Stocks and Uncommon Profits" by Philip Fisher: Detailed analysis of stock selection and investment strategies.
+            - "One Up On Wall Street" by Peter Lynch: Insights from one of the most successful investors of all time.
+            """)
+
+        st.subheader("Online Courses")
+        with st.expander("🎓 Click to enroll in courses"):
+            st.markdown("""
+            - [Coursera - Financial Markets](https://www.coursera.org/learn/financial-markets-global): Learn about global financial markets and investment strategies.
+            - [Udemy - Investment Management](https://www.udemy.com/course/investment-management/): Comprehensive course covering various aspects of investment management.
+            - [edX - Finance Essentials](https://www.edx.org/learn/finance-essentials): Essential finance concepts and principles taught by industry experts.
+            - [Khan Academy - Investment and Retirement](https://www.khanacademy.org/college-careers-more/personal-finance): Free courses on investment and retirement planning.
+            - [LinkedIn Learning - Investment Strategies](https://www.linkedin.com/learning/investment-strategies/): Develop investment strategies and portfolio management skills.
+            """)
     with tab5:
             st.subheader("Recommendation Results")
 
@@ -569,7 +631,83 @@ if LOGGED_IN:
 
 
     with tab6:
-            pass
+
+        # Define Portfolio class
+        class Portfolio:
+            def __init__(self):
+                self.transactions = pd.DataFrame(columns=["Date", "Type", "Asset", "Quantity", "Price"])
+            
+            def add_transaction(self, date, transaction_type, asset, quantity, price):
+                self.transactions = self.transactions.append({
+                    "Date": date,
+                    "Type": transaction_type,
+                    "Asset": asset,
+                    "Quantity": quantity,
+                    "Price": price
+                }, ignore_index=True)
+            
+            def clear_transaction_history(self):
+                self.transactions = pd.DataFrame(columns=["Date", "Type", "Asset", "Quantity", "Price"])
+            
+            def portfolio_value(self):
+                return (self.transactions["Quantity"] * self.transactions["Price"]).sum()
+            
+            def portfolio_performance(self):
+                # Placeholder for portfolio performance calculation
+                return np.random.uniform(5, 15)
+            
+            def plot_portfolio_performance(self):
+                # Placeholder for portfolio performance chart
+                x = np.arange(1, 11)
+                y = np.random.normal(100, 10, size=10)
+                fig = go.Figure(data=go.Scatter(x=x, y=y))
+                fig.update_layout(title="Portfolio Performance", xaxis_title="Time", yaxis_title="Value")
+                return fig
+            
+            def transaction_history(self):
+                return self.transactions
+            
+            def export_data(self, format="csv"):
+                if format == "csv":
+                    self.transactions.to_csv("portfolio_transactions.csv", index=False)
+                elif format == "excel":
+                    self.transactions.to_excel("portfolio_transactions.xlsx", index=False)
+
+        # Streamlit app
+        st.title("Portfolio Management")
+
+        # Instantiate Portfolio object
+        if 'portfolio' not in st.session_state:
+            st.session_state.portfolio = Portfolio()
+
+        # Add transaction to the portfolio
+        st.subheader("Add Transaction")
+        date = st.date_input("Date", value=datetime.today())
+        transaction_type = st.selectbox("Transaction Type", ["Buy", "Sell"])
+        asset = st.text_input("Asset")
+        quantity = st.number_input("Quantity", min_value=0)
+        price = st.number_input("Price", min_value=0.01)
+        if st.button("Add Transaction"):
+            st.session_state.portfolio.add_transaction(date, transaction_type, asset, quantity, price)
+            st.success("Transaction added successfully.")
+
+        # View portfolio value and performance
+        st.subheader("Portfolio Overview")
+        portfolio_value = st.session_state.portfolio.portfolio_value()
+        portfolio_performance = st.session_state.portfolio.portfolio_performance()
+        st.write(f"Portfolio Value: ${portfolio_value:.2f}")
+        st.write(f"Portfolio Performance: {portfolio_performance:.2f}%")
+
+        # Plot portfolio performance
+        st.subheader("Portfolio Performance Chart")
+        performance_chart = st.session_state.portfolio.plot_portfolio_performance()
+        st.plotly_chart(performance_chart)
+
+        # View transaction history
+        st.subheader("Transaction History")
+        transaction_history = st.session_state.portfolio.transaction_history()
+        st.write(transaction_history)
+
 
 else:
     st.warning("Please log in to access Finance Adviser.")
