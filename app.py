@@ -10,6 +10,9 @@ import yfinance as yf
 import streamlit as st
 import matplotlib.pyplot as plt
 import plotly.graph_objs as go
+from pypfopt.efficient_frontier import EfficientFrontier
+from pypfopt import risk_models
+from pypfopt import expected_returns
 from datetime import datetime
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
@@ -631,10 +634,10 @@ if LOGGED_IN:
 
 
     with tab6:
-
         # Define Portfolio class
         class Portfolio:
             def __init__(self):
+                self.weights = None
                 self.transactions = pd.DataFrame(columns=["Date", "Type", "Asset", "Quantity", "Price"])
             
             def add_transaction(self, date, transaction_type, asset, quantity, price):
@@ -652,17 +655,16 @@ if LOGGED_IN:
             def portfolio_value(self):
                 return (self.transactions["Quantity"] * self.transactions["Price"]).sum()
             
-            def portfolio_performance(self):
-                # Placeholder for portfolio performance calculation
-                return np.random.uniform(5, 15)
+            def calculate_weights(self):
+                returns = expected_returns.mean_historical_return(self.transactions)
+                cov_matrix = risk_models.sample_cov(self.transactions)
+                ef = EfficientFrontier(returns, cov_matrix)
+                self.weights = ef.max_sharpe_ratio()
             
             def plot_portfolio_performance(self):
                 # Placeholder for portfolio performance chart
-                x = np.arange(1, 11)
-                y = np.random.normal(100, 10, size=10)
-                fig = go.Figure(data=go.Scatter(x=x, y=y))
-                fig.update_layout(title="Portfolio Performance", xaxis_title="Time", yaxis_title="Value")
-                return fig
+                # Add your code to plot the portfolio performance using self.weights
+                pass
             
             def transaction_history(self):
                 return self.transactions
@@ -694,9 +696,13 @@ if LOGGED_IN:
         # View portfolio value and performance
         st.subheader("Portfolio Overview")
         portfolio_value = st.session_state.portfolio.portfolio_value()
-        portfolio_performance = st.session_state.portfolio.portfolio_performance()
         st.write(f"Portfolio Value: ${portfolio_value:.2f}")
-        st.write(f"Portfolio Performance: {portfolio_performance:.2f}%")
+
+        # Calculate and display portfolio weights
+        if st.button("Calculate Weights"):
+            st.session_state.portfolio.calculate_weights()
+            st.write("Portfolio Weights:")
+            st.write(st.session_state.portfolio.weights)
 
         # Plot portfolio performance
         st.subheader("Portfolio Performance Chart")
@@ -707,6 +713,7 @@ if LOGGED_IN:
         st.subheader("Transaction History")
         transaction_history = st.session_state.portfolio.transaction_history()
         st.write(transaction_history)
+
 
 
 else:
