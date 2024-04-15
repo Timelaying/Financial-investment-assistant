@@ -11,6 +11,12 @@ import matplotlib.pyplot as plt
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from streamlit_login_auth_ui.widgets import __login__
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import precision_score
+from sklearn.ensemble import RandomForestClassifier  #more resistant to over fitting
+
+
 
 # Set page configuration and header
 st.set_page_config(page_title="Finance Adviser")
@@ -169,8 +175,8 @@ if LOGGED_IN:
     with tab2:
         st.subheader('Realtime Stock Monitoring')
         ticker = st.selectbox('Select a stock ticker',
-                              ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS',
-                               'BABA', 'WMT', 'PG'])
+                            ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS',
+                            'BABA', 'WMT', 'PG'])
         # Fetch real-time stock data
         @st.cache_data
         def get_data(ticker):
@@ -185,106 +191,169 @@ if LOGGED_IN:
 
         if ticker:
             display_data()
-            # pass
-        with tab3:
 
-            class TradingSimulator:
-                def __init__(self):
-                    self.num_days = 100
-                    self.base_price = 100
-                    self.volatility = 0.02
-                    self.strategy = 'simple'  # Default trading strategy
-                    self.data_source = 'simulated'  # Default data source
+        data2 = yf.download(ticker, period="max")
 
-                def generate_price_data(self):
-                    """Generate simulated or historical price data."""
-                    if self.data_source == 'historical':
-                        # Download historical data from Yahoo Finance
-                        data = yf.download("AAPL", period="1y")
-                        price_data = data['Close'].to_numpy()
-                    else:
-                        # Simulate price data
-                        trend = np.sin(np.linspace(0, 10, self.num_days)) * 10
-                        noise = np.random.normal(0, self.volatility, self.num_days)
-                        price_data = np.cumsum(trend + noise) + self.base_price
-                    return price_data
+        # Feature Engineering
+        data2["Tomorrow"] = data2["Close"].shift(-1)  # Create a column for tomorrow's closing price
+        data2["Target"] = (data2["Tomorrow"] > data2["Close"]).astype(int)  # Create target variable (1 if price increases, 0 otherwise)
+        data2 = data2.loc["1990-01-01":].copy()  # Filter data from 1990 onwards
 
-                def simulate_trades(self, price_data, initial_balance):
-                    """Simulate trades based on the selected trading strategy."""
-                    balance = initial_balance
-                    buy_signal = True
+        # Training the model
+        model = RandomForestClassifier(n_estimators=200, min_samples_split=50, random_state=1)
+        predictors = ["Open", "Close", "High", "Low", "Volume"]  # Features for prediction
 
-                    for i in range(1, len(price_data)):
-                        if price_data[i] > price_data[i - 1] and buy_signal:
-                            shares = balance / price_data[i]
-                            balance = 0
-                            buy_signal = False
-                        elif price_data[i] < price_data[i - 1] and not buy_signal:
-                            balance = shares * price_data[i]
-                            buy_signal = True
+        # Function to predict and evaluate
+        def predict_and_evaluate(train, test, predictors, model):
+            model.fit(train[predictors], train["Target"])
+            preds = model.predict(test[predictors])
+            accuracy = accuracy_score(test["Target"], preds)
+            precision = precision_score(test["Target"], preds)
+            return preds, accuracy, precision
 
-                    return balance
+        # Backtesting with rolling windows
+        def backtest(data, model, predictors, start=2500, step=250):
+            all_predictions = []
+            accuracies = []
+            precisions = []
+            for i in range(start, data.shape[0], step):
+                train = data.iloc[0:i].copy()
+                test = data.iloc[i:(i + step)].copy()
+                predictions, accuracy, precision = predict_and_evaluate(train, test, predictors, model)
+                all_predictions.append(pd.Series(predictions, index=test.index, name="Predictions"))
+                accuracies.append(accuracy)
+                precisions.append(precision)
+            return pd.concat(all_predictions), np.mean(accuracies), np.mean(precisions)
 
-                def candlestick_chart(self, price_data):
-                    """Generate a candlestick chart with price data."""
-                    fig = go.Figure()
+        # Perform backtesting
+        predictions, accuracy, precision = backtest(data2, model, predictors)
 
-                    fig.add_trace(go.Scatter(x=np.arange(len(price_data)), y=price_data, mode='lines', name='Price'))
-                    fig.add_trace(go.Candlestick(x=np.arange(len(price_data)),
-                                                open=price_data,
-                                                high=price_data + 2 * np.random.rand(len(price_data)),
-                                                low=price_data - 2 * np.random.rand(len(price_data)),
-                                                close=price_data,
-                                                name='Candlestick'))
+        # Display model evaluation metrics
+        st.subheader("Model Evaluation Metrics")
+        st.write(f"Accuracy: {accuracy:.2f}")
+        st.write(f"Precision: {precision:.2f}")
 
-                    fig.update_layout(title='Simulated Market Data (Candlestick Chart)',
-                                    xaxis_title='Days',
-                                    yaxis_title='Price',
-                                    xaxis_rangeslider_visible=False)
+        # Feature Importance
+        st.subheader("Feature Importance")
+        model.fit(data2[predictors], data2["Target"])  # Refit the model on entire data
+        feature_importance = pd.DataFrame({'Feature': predictors, 'Importance': model.feature_importances_})
+        feature_importance = feature_importance.sort_values(by='Importance', ascending=False)
+        st.bar_chart(feature_importance.set_index('Feature'))
 
-                    return fig
-
-
-            def main():
-                st.title('Trading Simulator')
-
-                # Sidebar for simulator parameters
-                st.sidebar.header('Parameters')
-                num_days = st.sidebar.slider('Number of Days', min_value=10, max_value=1000, value=100)
-                volatility = st.sidebar.slider('Volatility', min_value=0.01, max_value=0.10, value=0.02)
-                initial_balance = st.sidebar.number_input("Initial Balance ($)", min_value=1, step=1, value=10000)
-                strategy = st.sidebar.selectbox('Trading Strategy', ['simple', 'historical'])
-                if strategy == 'historical':
-                    st.sidebar.warning("Using historical data from Yahoo Finance.")
-
-                # Initialize TradingSimulator
-                simulator = TradingSimulator()
-                simulator.num_days = num_days
-                simulator.volatility = volatility
-                simulator.strategy = strategy
-
-                # Simulate market
-                price_data = simulator.generate_price_data()
-
-                # Candlestick chart
-                st.subheader('Candlestick Chart')
-                candlestick_chart = simulator.candlestick_chart(price_data)
-                st.plotly_chart(candlestick_chart)
-
-                # Display balance
-                final_balance = simulator.simulate_trades(price_data, initial_balance)
-                st.write(f"Initial Balance: ${initial_balance:.2f}")
-                st.write(f"Final Balance: ${final_balance:.2f}")
+        # Investment Recommendation
+        st.subheader("Investment Recommendation")
+        last_day_data = data2.iloc[-1]
+        last_day_close = last_day_data["Close"]
+        last_day_features = last_day_data[predictors].values.reshape(1, -1)
+        next_day_prediction = model.predict(last_day_features)[0]
+        prediction_confidence = model.predict_proba(last_day_features)[0][next_day_prediction]
+        prediction_label = "High" if next_day_prediction == 1 else "Low"
+        advice = "Invest" if next_day_prediction == 1 else "Do Not Invest"
+        st.write(f"Predicted Closing Price for Next Day: {prediction_label}")
+        st.write(f"Confidence: {prediction_confidence:.2f}")
+        st.write(f"Advice: {advice}")
 
 
-            if __name__ == "__main__":
-                main()
+
+
+    with tab3:
+        class TradingSimulator:
+            def __init__(self):
+                self.num_days = 100
+                self.base_price = 100
+                self.volatility = 0.02
+                self.strategy = 'simple'  # Default trading strategy
+                self.data_source = 'simulated'  # Default data source
+
+            def generate_price_data(self):
+                """Generate simulated or historical price data."""
+                if self.data_source == 'historical':
+                    # Download historical data from Yahoo Finance
+                    data = yf.download("AAPL", period="1y")
+                    price_data = data['Close'].to_numpy()
+                else:
+                    # Simulate price data
+                    trend = np.sin(np.linspace(0, 10, self.num_days)) * 10
+                    noise = np.random.normal(0, self.volatility, self.num_days)
+                    price_data = np.cumsum(trend + noise) + self.base_price
+                return price_data
+
+            def simulate_trades(self, price_data, initial_balance):
+                """Simulate trades based on the selected trading strategy."""
+                balance = initial_balance
+                buy_signal = True
+
+                for i in range(1, len(price_data)):
+                    if price_data[i] > price_data[i - 1] and buy_signal:
+                        shares = balance / price_data[i]
+                        balance = 0
+                        buy_signal = False
+                    elif price_data[i] < price_data[i - 1] and not buy_signal:
+                        balance = shares * price_data[i]
+                        buy_signal = True
+
+                return balance
+
+            def candlestick_chart(self, price_data):
+                """Generate a candlestick chart with price data."""
+                fig = go.Figure()
+
+                fig.add_trace(go.Scatter(x=np.arange(len(price_data)), y=price_data, mode='lines', name='Price'))
+                fig.add_trace(go.Candlestick(x=np.arange(len(price_data)),
+                                            open=price_data,
+                                            high=price_data + 2 * np.random.rand(len(price_data)),
+                                            low=price_data - 2 * np.random.rand(len(price_data)),
+                                            close=price_data,
+                                            name='Candlestick'))
+
+                fig.update_layout(title='Simulated Market Data (Candlestick Chart)',
+                                xaxis_title='Days',
+                                yaxis_title='Price',
+                                xaxis_rangeslider_visible=False)
+
+                return fig
+
+
+        def main():
+            st.title('Trading Simulator')
+
+            # Sidebar for simulator parameters
+            st.sidebar.header('Parameters')
+            num_days = st.sidebar.slider('Number of Days', min_value=10, max_value=1000, value=100)
+            volatility = st.sidebar.slider('Volatility', min_value=0.01, max_value=0.10, value=0.02)
+            initial_balance = st.sidebar.number_input("Initial Balance ($)", min_value=1, step=1, value=10000)
+            strategy = st.sidebar.selectbox('Trading Strategy', ['simple', 'historical'])
+            if strategy == 'historical':
+                st.sidebar.warning("Using historical data from Yahoo Finance.")
+
+            # Initialize TradingSimulator
+            simulator = TradingSimulator()
+            simulator.num_days = num_days
+            simulator.volatility = volatility
+            simulator.strategy = strategy
+
+            # Simulate market
+            price_data = simulator.generate_price_data()
+
+            # Candlestick chart
+            st.subheader('Candlestick Chart')
+            candlestick_chart = simulator.candlestick_chart(price_data)
+            st.plotly_chart(candlestick_chart)
+
+            # Display balance
+            final_balance = simulator.simulate_trades(price_data, initial_balance)
+            st.write(f"Initial Balance: ${initial_balance:.2f}")
+            st.write(f"Final Balance: ${final_balance:.2f}")
+
+
+        if __name__ == "__main__":
+            main()
 
 
             #pass
-        with tab4:
+    with tab4:
             pass
-        with tab5:
+    with tab5:
             st.subheader("Recommendation Results")
 
             df = pd.DataFrame()
@@ -499,7 +568,7 @@ if LOGGED_IN:
                     st.pyplot(plt)
 
 
-        with tab6:
+    with tab6:
             pass
 
 else:
