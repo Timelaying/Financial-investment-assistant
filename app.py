@@ -1,4 +1,4 @@
-# Importing necessary libraries
+# Import necessary libraries
 import requests
 import pandas_ta
 import pypfopt
@@ -22,8 +22,10 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import precision_score
 from sklearn.ensemble import RandomForestClassifier  #more resistant to over fitting
 from pypfopt import EfficientFrontier, risk_models, expected_returns
+import sqlite3
+import json
 
-#Modules for tabs
+# Modules for tabs
 from news import render_news
 from realtime_stock_monitoring import render_realtime_stock_monitoring
 from trading_simulator import render_trading_simulator
@@ -31,10 +33,42 @@ from reading_resources import render_reading_resources
 from recommendation_results import generate_recommendation_results
 from portfolio_management import portfolio_management
 
-
 # Set page configuration and header
 st.set_page_config(page_title="Finance Adviser")
 st.header("Finance Adviser")
+
+# Load credentials from JSON file
+with open('_secret_auth_.json') as f:
+    credentials = json.load(f)
+
+# Connect to SQLite database (create one if it doesn't exist)
+conn = sqlite3.connect('credentials.db')
+cursor = conn.cursor()
+
+# Create a table to store credentials
+cursor.execute('''CREATE TABLE IF NOT EXISTS users
+                (username TEXT PRIMARY KEY, name TEXT, email TEXT, password TEXT)''')
+
+# Insert credentials into the table, checking for duplicates
+for user in credentials:
+    username = user['username']
+    name = user['name']
+    email = user['email']
+    password = user['password']
+    
+    # Check if username or email already exists in the database
+    cursor.execute("SELECT COUNT(*) FROM users WHERE username = ? OR email = ?", (username, email))
+    if cursor.fetchone()[0] == 0:  # Username or email does not exist
+        cursor.execute("INSERT INTO users (username, name, email, password) VALUES (?, ?, ?, ?)",
+                       (username, name, email, password))
+    else:
+        st.error(f"The username '{username}' or email '{email}' already exists. Please choose a different one.")
+
+# Commit changes and close connection
+conn.commit()
+conn.close()
+
+
 
 # Authenticate user
 __login__obj = __login__(
