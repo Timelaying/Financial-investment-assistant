@@ -19,7 +19,7 @@ def predict_and_evaluate(train, test, predictors, model):
     model.fit(train[predictors], train["Target"])
     preds = model.predict(test[predictors])
     accuracy = accuracy_score(test["Target"], preds)
-    precision = precision_score(test["Target"], preds)
+    precision = precision_score(test["Target"], preds, zero_division=1)  # Addressing warning 1
     return preds, accuracy, precision
 
 def backtest(data, model, predictors, start=2500, step=250):
@@ -71,11 +71,17 @@ def render_realtime_stock_monitoring():
 
             last_day_data = data2.iloc[-1]
             last_day_features = last_day_data[predictors].values.reshape(1, -1)
-            next_day_prediction = model.predict(last_day_features)[0]
-            prediction_confidence = model.predict_proba(last_day_features)[0][next_day_prediction]
+            
+            # Set column names explicitly for last_day_features
+            last_day_features_df = pd.DataFrame(last_day_features, columns=predictors)
+            
+            next_day_prediction = model.predict(last_day_features_df)[0]
+            prediction_confidence = model.predict_proba(last_day_features_df)[0][next_day_prediction]
             prediction_label = "High" if next_day_prediction == 1 else "Low"
             advice = "Invest" if next_day_prediction == 1 else "Do Not Invest"
             st.subheader("Investment Recommendation")
             st.write(f"Predicted Closing Price for Next Day: {prediction_label}")
             st.write(f"Confidence: {prediction_confidence:.2f}")
             st.write(f"Advice: {advice}")
+
+
