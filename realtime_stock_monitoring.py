@@ -2,38 +2,40 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
+from sklearn.svm import SVC
+from xgboost import XGBClassifier
 from sklearn.metrics import accuracy_score, precision_score
 
-def display_data(ticker):
-    data = get_data(ticker)
-    st.write(f"Daily Close Price of {ticker} [Last 365 Days]")
-    st.line_chart(data['Close'])
-
 @st.cache_data
-def get_data(ticker):
-    data = yf.download(ticker, period="1y", interval="1d")
+def get_data(ticker, period="1y"):
+    data = yf.download(ticker, period=period, interval="1d")
     return data
 
-def predict_and_evaluate(train, test, predictors, model):
-    model.fit(train[predictors], train["Target"])
-    preds = model.predict(test[predictors])
+def compute_target_column(data):
+    data["Tomorrow"] = data["Close"].shift(-1)
+    data["Target"] = (data["Tomorrow"] > data["Close"]).astype(int)
+    data.dropna(inplace=True)  # Remove rows with NaN values
+    return data
+
+@st.cache
+def backtest(data, models):
+    data = compute_target_column(data)
+    predictors = ["Open", "Close", "High", "Low", "Volume"]
+    train_size = int(0.8 * len(data))
+    train = data.iloc[:train_size]
+    test = data.iloc[train_size:]
+    for model_name, model in models:
+        model.fit(train[predictors], train["Target"])
+    preds = [model.predict(test[predictors]) for _, model in models]
+    preds = np.mean(preds, axis=0) > 0.5  # Take the average prediction and convert to binary
     accuracy = accuracy_score(test["Target"], preds)
     precision = precision_score(test["Target"], preds, zero_division=1)  # Addressing warning 1
     return preds, accuracy, precision
 
-def backtest(data, model, predictors, start=2500, step=250):
-    all_predictions = []
-    accuracies = []
-    precisions = []
-    for i in range(start, data.shape[0], step):
-        train = data.iloc[0:i].copy()
-        test = data.iloc[i:(i + step)].copy()
-        predictions, accuracy, precision = predict_and_evaluate(train, test, predictors, model)
-        all_predictions.append(pd.Series(predictions, index=test.index, name="Predictions"))
-        accuracies.append(accuracy)
-        precisions.append(precision)
-    return pd.concat(all_predictions), np.mean(accuracies), np.mean(precisions)
+def display_data(data):
+    st.write(f"Daily Close Price [Last {len(data)} Days]")
+    st.line_chart(data['Close'])
 
 def render_realtime_stock_monitoring():
     st.subheader('Realtime Stock Monitoring')
@@ -42,46 +44,24 @@ def render_realtime_stock_monitoring():
                         'BABA', 'WMT', 'PG'])
 
     if ticker:
-        display_data(ticker)
+        period = st.radio("Select the period", ["1y", "2y", "5y"])  # Limiting historical data to reduce load time
+        data = get_data(ticker, period=period)
+        display_data(data)
 
     generate_prediction = st.button("Generate Prediction and Analysis")
 
     if generate_prediction:
         with st.spinner("Fetching and processing data..."):
-
-            data2 = yf.download(ticker, period="max")
-            data2["Tomorrow"] = data2["Close"].shift(-1)
-            data2["Target"] = (data2["Tomorrow"] > data2["Close"]).astype(int)
-            data2 = data2.loc["1990-01-01":].copy()
-
-            model = RandomForestClassifier(n_estimators=200, min_samples_split=50, random_state=1)
-            predictors = ["Open", "Close", "High", "Low", "Volume"]
-
-            predictions, accuracy, precision = backtest(data2, model, predictors)
-
+            models = [("rf", RandomForestClassifier(n_estimators=100, min_samples_split=50, random_state=1)),
+                      ("xgb", XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=1)),
+                      ("svm", SVC(kernel='rbf', C=1, gamma='scale', probability=True, random_state=1))]
+            preds, accuracy, precision = backtest(data, models)
             st.subheader("Model Evaluation Metrics")
             st.write(f"Accuracy: {accuracy:.2f}")
             st.write(f"Precision: {precision:.2f}")
-
-            model.fit(data2[predictors], data2["Target"])
-            feature_importance = pd.DataFrame({'Feature': predictors, 'Importance': model.feature_importances_})
-            feature_importance = feature_importance.sort_values(by='Importance', ascending=False)
-            st.subheader("Feature Importance")
-            st.bar_chart(feature_importance.set_index('Feature'))
-
-            last_day_data = data2.iloc[-1]
-            last_day_features = last_day_data[predictors].values.reshape(1, -1)
-            
-            # Set column names explicitly for last_day_features
-            last_day_features_df = pd.DataFrame(last_day_features, columns=predictors)
-            
-            next_day_prediction = model.predict(last_day_features_df)[0]
-            prediction_confidence = model.predict_proba(last_day_features_df)[0][next_day_prediction]
-            prediction_label = "High" if next_day_prediction == 1 else "Low"
-            advice = "Invest" if next_day_prediction == 1 else "Do Not Invest"
             st.subheader("Investment Recommendation")
-            st.write(f"Predicted Closing Price for Next Day: {prediction_label}")
-            st.write(f"Confidence: {prediction_confidence:.2f}")
-            st.write(f"Advice: {advice}")
+            st.write("Predicted Closing Price for Next Day: ", "High" if preds[-1] == 1 else "Low")
+            st.write("Confidence: ", np.mean(preds))
+            st.write("Advice: ", "Invest" if preds[-1] == 1 else "Do Not Invest")
 
 
