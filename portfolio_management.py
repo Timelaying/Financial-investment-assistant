@@ -4,12 +4,11 @@ import plotly.graph_objs as go
 from datetime import datetime
 from pypfopt import expected_returns, risk_models
 from pypfopt.efficient_frontier import EfficientFrontier
-
+import numpy as np
 
 class Portfolio:
     def __init__(self):
-        self.weights = None
-        self.transactions = pd.DataFrame(columns=["Date", "Type", "Asset", "Quantity", "Price"])
+        self.transactions = []
         self.portfolio_values = []
 
     def add_transaction(self, date, transaction_type, asset, quantity, price):
@@ -23,62 +22,42 @@ class Portfolio:
             st.warning("Invalid transaction data. Please check your input.")
             return
 
-        new_transaction = pd.DataFrame({
-            "Date": [date],
-            "Type": [transaction_type],
-            "Asset": [asset],
-            "Quantity": [quantity],
-            "Price": [price]
-        })
-
-        self.transactions = pd.concat([self.transactions, new_transaction], ignore_index=True)
+        self.transactions.append({"Date": date, "Type": transaction_type, "Asset": asset, "Quantity": quantity, "Price": price})
         self.portfolio_values.append(self.portfolio_value())
 
     def clear_transaction_history(self):
-        self.transactions = pd.DataFrame(columns=["Date", "Type", "Asset", "Quantity", "Price"])
+        self.transactions = []
         self.portfolio_values = []
 
     def portfolio_value(self):
-        return (self.transactions["Quantity"] * self.transactions["Price"]).sum()
+        return sum(trans["Quantity"] * trans["Price"] for trans in self.transactions)
 
     def get_asset_percentage(self):
-        if self.transactions.empty:
+        if not self.transactions:
             return None
 
-        asset_percentage = self.transactions.groupby('Asset').apply(lambda x: (x['Quantity'] * x['Price']).sum() / self.portfolio_value() * 100)
+        assets = pd.DataFrame(self.transactions)
+        asset_percentage = assets.groupby('Asset').apply(lambda x: (x['Quantity'] * x['Price']).sum() / self.portfolio_value() * 100)
         return asset_percentage
 
-    def plot_asset_percentage(self):
-        asset_percentage = self.get_asset_percentage()
-        if asset_percentage is None:
-            return None
-
-        labels = asset_percentage.index.tolist()
-        values = asset_percentage.values.tolist()
-
-        fig = go.Figure(data=[go.Pie(labels=labels, values=values)])
-        fig.update_layout(title='Asset Allocation')
-        return fig
-    
     def calculate_weights(self):
-        if self.transactions.empty:
+        if not self.transactions:
             return None
 
         asset_percentage = self.get_asset_percentage()
         if asset_percentage is None:
             return None
 
-        total_assets = len(asset_percentage)
         self.weights = asset_percentage / 100
         return self.weights
 
     def plot_portfolio_performance(self):
         if not self.portfolio_values:
-            return None  # Return None if no portfolio values are available
+            return None
 
-        # Create a line chart showing portfolio value over time
+        dates = [trans['Date'] for trans in self.transactions]
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=self.transactions['Date'], y=self.portfolio_values, mode='lines', name='Portfolio Value'))
+        fig.add_trace(go.Scatter(x=dates, y=self.portfolio_values, mode='lines', name='Portfolio Value'))
         fig.update_layout(title='Portfolio Performance',
                           xaxis_title='Date',
                           yaxis_title='Portfolio Value')
@@ -86,7 +65,7 @@ class Portfolio:
         return fig
 
     def transaction_history(self):
-        return self.transactions
+        return pd.DataFrame(self.transactions)
 
 
 def portfolio_management():
@@ -128,4 +107,5 @@ def portfolio_management():
     st.subheader("Transaction History")
     transaction_history = st.session_state.portfolio.transaction_history()
     st.write(transaction_history)
+
 
