@@ -1,5 +1,5 @@
 streamlit-login-auth-ui == 0.2.0
 streamlit-cookies-manager == 0.2.0
-streamlit-lottie == 0.0.5
+streamlit_lottie == 0.0.5
 streamlit-option-menu == 0.3.12
 
