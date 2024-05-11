@@ -7,7 +7,7 @@ from portfolio_management import Portfolio  # Replace `portfolio_management` wit
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Now import
-from portfolio_management import portfolio_management
+from portfolio_management import *
 
 @pytest.fixture
 def empty_portfolio():

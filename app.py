@@ -27,7 +27,7 @@ if LOGGED_IN:
 
     # Initialize session state
     if 'form_data' not in st.session_state:
-        st.session_state.form_data = {
+        st.session_state.form_data = { 
             'risk_tolerance': 'High',
             'investment_horizon': 'Short-term - 1 to 3 years',
             'investment_style': 'Value Investing'
