@@ -15,10 +15,8 @@ def get_data(ticker, period="1y"):
 def compute_target_column(data):
     data["Tomorrow"] = data["Close"].shift(-1)
     data["Target"] = (data["Tomorrow"] > data["Close"]).astype(int)
-    data["Target"] = data["Target"].replace({0: -1})  # Replace 0 with -1 to match XGBoost's expected labels
     data.dropna(inplace=True)  # Remove rows with NaN values
     return data
-
 
 def train_models():
     rf_model = RandomForestClassifier(n_estimators=100, min_samples_split=50, random_state=1)
