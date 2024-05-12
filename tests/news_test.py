@@ -1,8 +1,15 @@
-import news  # assuming your code is in a file named main.py
 import streamlit as st
 import pytest
+import sys
+import os
 from bs4 import BeautifulSoup
 from unittest.mock import patch, MagicMock
+
+# Add parent directory to sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Now import
+from news import *
 
 @pytest.fixture
 def mock_get_news():
@@ -17,7 +24,7 @@ def test_render_news(mock_get_news):
     # Patching st.subheader and st.markdown
     with patch.object(st, "subheader"), patch.object(st, "markdown") as mock_markdown:
         # Calling the function under test
-        news.render_news()
+        render_news()
 
         # Asserting that st.subheader was called
         st.subheader.assert_called_once_with("News")
