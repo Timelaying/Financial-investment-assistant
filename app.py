@@ -68,7 +68,7 @@ if LOGGED_IN:
 
     # Display tabs and selected stock data
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        'New',
+        'News',
         'Market analysis',
         'Trading simulator',
         'Reading resources',
