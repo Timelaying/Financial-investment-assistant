@@ -1,20 +1,21 @@
-import numpy as np
-import pytest
-import sys
-import os
-from unittest.mock import patch, MagicMock
+import numpy as np  # Importing numpy for numerical operations
+import pytest  # Importing pytest for testing
+import sys  # Importing sys for system-specific parameters and functions
+import os  # Importing os for operating system dependent functionality
+from unittest.mock import patch, MagicMock  # Importing patch and MagicMock for mocking
 
-
-# Add parent directory to sys.path
+# Add parent directory to sys.path to ensure modules in the parent directory can be imported
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Now import utils
+# Now import custom module 'trading_simulator' from the parent directory
 from trading_simulator import *
 
+# Define a pytest fixture for the TradingSimulator
 @pytest.fixture
 def simulator():
     return TradingSimulator()
 
+# Test the generate_price_data function
 def test_generate_price_data(simulator):
     # Test simulated data generation
     num_days = 100
@@ -30,19 +31,7 @@ def test_generate_price_data(simulator):
     price_data = simulator.generate_price_data(num_days, volatility, data_source, period)
     assert len(price_data) == num_days
 
-    # # Test historical data generation for 2 year period
-    # period = "2y"
-    # num_days = 2 * 252  # Number of trading days in 2 years
-    # price_data = simulator.generate_price_data(num_days, volatility, data_source, period)
-    # assert len(price_data) == num_days
-
-    # # Test historical data generation for 5 year period
-    # period = "5y"
-    # num_days = 5 * 252  # Number of trading days in 5 years
-    # price_data = simulator.generate_price_data(num_days, volatility, data_source, period)
-    # assert len(price_data) == num_days
-
-
+# Test the simulate_trades function
 def test_simulate_trades(simulator):
     # Test with simulated price data
     price_data = np.array([100, 105, 110, 115, 120, 115, 110, 105])
@@ -55,14 +44,14 @@ def test_simulate_trades(simulator):
     final_balance = simulator.simulate_trades(price_data, initial_balance)
     assert final_balance == initial_balance
 
+# Test the candlestick_chart function
 def test_candlestick_chart(simulator):
     # Test candlestick chart generation
     price_data = np.array([100, 105, 110, 115, 120, 115, 110, 105])
     candlestick_chart = simulator.candlestick_chart(price_data)
     assert candlestick_chart is not None
 
-    # Add more specific tests for chart properties or data visualization if needed
-
+# Test the render_trading_simulator function
 def test_render_trading_simulator():
     # Since this function mainly consists of Streamlit interactions, it's challenging to write unit tests for it.
     # It's typically tested manually or using end-to-end testing frameworks like Selenium.
