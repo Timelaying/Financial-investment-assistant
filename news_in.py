@@ -1,8 +1,8 @@
 import streamlit as st
-from finvizfinance.quote import finvizfinance
-from finvizfinance.insider import Insider
 from finvizfinance.news import News as FinvizNews
 from news import render_news as CNBC_news
+from finvizfinance.quote import finvizfinance
+from finvizfinance.insider import Insider
 
 def main_news():
     # List of ticker symbols
@@ -12,12 +12,12 @@ def main_news():
     st.title("Financial Investment Assistant")
     st.write("Welcome to the Financial Investment Assistant! This assistant provides tools and information to help you make informed investment decisions.")
 
-    # Sidebar navigation
-    menu = ["Home", "Stock Information", "Financial News", "CNBC News", "Insider Trading"]
-    choice = st.sidebar.selectbox("Navigation", menu)
+    # Navigation options as radio buttons
+    st.header("Navigation")
+    selected_option = st.radio("", ["Home", "Stock Information", "Financial News", "CNBC News", "Insider Trading"])
 
     # Home page
-    if choice == "Home":
+    if selected_option == "Home":
         st.write("This assistant offers the following sections:")
         st.write("- Stock Information: Obtain detailed information about stocks.")
         st.write("- Financial News: Stay updated with financial news from FinvizFinance.")
@@ -25,7 +25,7 @@ def main_news():
         st.write("- Insider Trading: Get insights into insider trading activities.")
         
     # Stock Information page
-    elif choice == "Stock Information":
+    elif selected_option == "Stock Information":
         st.subheader("Get Stock Information")
         selected_ticker = st.selectbox("Select Ticker Symbol", tickers)
         if st.button("Get Information"):
@@ -54,7 +54,7 @@ def main_news():
             st.write(inside_trader_df)
 
     # Financial News page
-    elif choice == "Financial News":
+    elif selected_option == "Financial News":
         st.subheader("Financial News")
         fnews = FinvizNews()
         all_news = fnews.get_news()
@@ -65,12 +65,12 @@ def main_news():
             st.write("Selected news type not available.")
 
     # CNBC News page
-    elif choice == "CNBC News":
+    elif selected_option == "CNBC News":
         st.subheader("CNBC News")
         CNBC_news()
 
     # Insider Trading page
-    elif choice == "Insider Trading":
+    elif selected_option == "Insider Trading":
         st.subheader("Insider Trading Information")
         insider_option = st.selectbox("Select Insider Option", ["latest", "top week", "top owner trade"])
         finsider = Insider(option=insider_option)
