@@ -10,15 +10,15 @@ class TradingSimulator:
     def generate_price_data(self, num_days, volatility, data_source, period=None):
         """Generate simulated or historical price data."""
         if data_source == 'historical':
-            period = st.radio("Select the period", ["1y", "2y", "5y"], key="period_selection")  # Add a unique key
+            period = st.radio("Select the period", ["1y", "2y", "5y"], key="period_selection")  # Unique key for caching
 
             if period is None:
                 raise ValueError("Missing 'period' argument for historical data generation.")
             
-
+            # Select a stock ticker
             ticker = st.selectbox('Select a stock ticker',
                           ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS',
-                           'BABA', 'WMT', 'PG'], key="ticker_selection")  # Add a unique key
+                           'BABA', 'WMT', 'PG'], key="ticker_selection")  # Unique key for caching
 
             data = yf.download(ticker, period=period, interval="1d")
             price_data = data['Close'].to_numpy()

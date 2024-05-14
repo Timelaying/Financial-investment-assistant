@@ -7,23 +7,27 @@ from xgboost import XGBClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, precision_score
 
+# Function to fetch historical stock data
 @st.cache
 def get_data(ticker, period="1y"):
     data = yf.download(ticker, period=period, interval="1d")
     return data
 
+# Function to compute target column for classification
 def compute_target_column(data):
     data["Tomorrow"] = data["Close"].shift(-1)
     data["Target"] = (data["Tomorrow"] > data["Close"]).astype(int)
     data.dropna(inplace=True)  # Remove rows with NaN values
     return data
 
+# Function to train classification models
 def train_models():
     rf_model = RandomForestClassifier(n_estimators=100, min_samples_split=50, random_state=1)
     xgb_model = XGBClassifier(n_estimators=100, learning_rate=0.1, max_depth=3, random_state=1)
     svm_model = SVC(kernel='rbf', C=1, gamma='scale', probability=True, random_state=1)
     return [("rf", rf_model), ("xgb", xgb_model), ("svm", svm_model)]
 
+# Function to backtest classification models
 @st.cache
 def backtest(data, models):
     data = compute_target_column(data)
@@ -39,10 +43,12 @@ def backtest(data, models):
     precision = precision_score(test["Target"], preds, zero_division=1)  # Addressing warning
     return preds, accuracy, precision
 
+# Function to display stock data
 def display_data(data):
     st.write(f"Daily Close Price [Last {len(data)} Days]")
     st.line_chart(data['Close'])
 
+# Function to render the real-time stock monitoring UI
 def render_realtime_stock_monitoring():
     st.subheader('Realtime Stock Monitoring')
     ticker = st.selectbox('Select a stock ticker',
@@ -67,4 +73,3 @@ def render_realtime_stock_monitoring():
                 st.write("Predicted Closing Price for Next Day: ", "High" if preds[-1] == 1 else "Low")
                 st.write("Confidence: ", np.mean(preds))
                 st.write("Advice: ", "Invest" if preds[-1] == 1 else "Do Not Invest")
-

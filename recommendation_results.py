@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 import ta
 import pandas_ta
 
+# Function to make MACD-based decisions
 def MACDdecision(df, risk_tolerance):
+    # Determine the threshold based on risk tolerance
     if risk_tolerance == "High":
         threshold = 0.2
     elif risk_tolerance == "Medium":
@@ -13,11 +15,14 @@ def MACDdecision(df, risk_tolerance):
     else:
         threshold = 0
 
+    # Calculate MACD difference and make decisions
     df['MACD_diff'] = ta.trend.macd_diff(df.Close)
     df.loc[(df.MACD_diff > threshold) & (df.MACD_diff.shift(1) < threshold), 'Decision MACD'] = 'Buy'
     df.loc[~(df.MACD_diff > threshold) & (df.MACD_diff.shift(1) < threshold), 'Decision MACD'] = "Don't Buy"
 
+# Function to make RSI and SMA-based decisions
 def RSI_SMAdecision(df, investment_horizon):
+    # Determine RSI threshold based on investment horizon
     if investment_horizon == "Short-term - 1 to 3 years":
         RSI_threshold = 30
     elif investment_horizon == "Medium-term - 3 to 5 years":
@@ -27,18 +32,19 @@ def RSI_SMAdecision(df, investment_horizon):
     else:
         RSI_threshold = 0
 
+    # Calculate RSI and SMA and make decisions
     df['RSI'] = ta.momentum.rsi(df.Close, window=10)
     df['SMA200'] = ta.trend.sma_indicator(df.Close, window=200)
     df.loc[(df.Close > df.SMA200) & (df.RSI < RSI_threshold), 'Decision RSI/SMA'] = 'Buy'
     df.loc[~((df.Close > df.SMA200) & (df.RSI < RSI_threshold)), 'Decision RSI/SMA'] = "Don't Buy"
 
+# Function to analyze Bollinger Bands
 def Bollinger_Bands(df, investment_style):
+    # Calculate Bollinger Bands
     df['Middle Band'] = ta.volatility.bollinger_mavg(df.Close)
     df['Upper Band'], df['Lower Band'] = ta.volatility.bollinger_hband(df.Close), ta.volatility.bollinger_lband(df.Close)
 
-    df.loc[(df.Close > df['Upper Band']), 'Bollinger Bands'] = 'Overbought'
-    df.loc[(df.Close < df['Lower Band']), 'Bollinger Bands'] = 'Oversold'
-
+    # Determine buy, sell, or hold conditions based on investment style
     if investment_style == "Value Investing":
         buy_condition = df.Close < df['Lower Band']
         sell_condition = df.Close > df['Upper Band']
@@ -49,21 +55,23 @@ def Bollinger_Bands(df, investment_style):
         buy_condition = False
         sell_condition = False
 
+    # Assign buy, sell, hold labels
     df.loc[buy_condition, 'Bollinger Bands'] = 'Buy'
     df.loc[sell_condition, 'Bollinger Bands'] = 'Sell'
     df.loc[~(buy_condition | sell_condition), 'Bollinger Bands'] = 'Hold'
 
+    # Additional analysis for overbought/oversold
     df['Overbought/Oversold'] = ''
     df.loc[(df.Close > df['Upper Band']), 'Overbought/Oversold'] = 'Overbought'
     df.loc[(df.Close < df['Lower Band']), 'Overbought/Oversold'] = 'Oversold'
 
+# Function to analyze volume data
 def Volume_Analysis(df, risk_tolerance):
+    # Calculate rolling averages for volume
     df['Volume SMA50'] = df['Volume'].rolling(window=50).mean()
     df['Volume SMA200'] = df['Volume'].rolling(window=200).mean()
-    df.loc[df['Volume SMA50'] > df['Volume SMA200'], 'Volume Analysis'] = 'Increasing Volume'
-    df.loc[df['Volume SMA50'] < df['Volume SMA200'], 'Volume Analysis'] = 'Decreasing Volume'
-    df.loc[~((df['Volume SMA50'] > df['Volume SMA200']) | (df['Volume SMA50'] < df['Volume SMA200'])), 'Volume Analysis'] = 'Stable Volume'
 
+    # Determine buy, sell, hold conditions based on volume and risk tolerance
     if risk_tolerance == "High":
         volume_threshold = 0.3
     elif risk_tolerance == "Medium":
@@ -71,8 +79,11 @@ def Volume_Analysis(df, risk_tolerance):
     else:
         volume_threshold = 0.1
 
-    df['Volume SMA50'] = df['Volume'].rolling(window=50).mean()
-    df['Volume SMA200'] = df['Volume'].rolling(window=200).mean()
+    # Assign buy, sell, hold labels
+    df.loc[df['Volume SMA50'] > df['Volume SMA200'], 'Volume Analysis'] = 'Increasing Volume'
+    df.loc[df['Volume SMA50'] < df['Volume SMA200'], 'Volume Analysis'] = 'Decreasing Volume'
+    df.loc[~((df['Volume SMA50'] > df['Volume SMA200']) | (df['Volume SMA50'] < df['Volume SMA200'])), 'Volume Analysis'] = 'Stable Volume'
+
     df.loc[df['Volume SMA50'] > df['Volume SMA200'] * (1 + volume_threshold), 'Volume Analysis'] = 'Buy'
     df.loc[df['Volume SMA50'] < df['Volume SMA200'] * (1 - volume_threshold), 'Volume Analysis'] = 'Sell'
     df.loc[~((df['Volume SMA50'] > df['Volume SMA200'] * (1 + volume_threshold)) |
@@ -88,11 +99,14 @@ def Volume_Analysis(df, risk_tolerance):
     df['Volume Support'] = df['Volume SMA20'] * 0.95
     df['Volume Resistance'] = df['Volume SMA50'] * 1.05
 
+# Function to analyze On-Balance Volume (OBV)
 def On_Balance_Volume(df, investment_horizon):
+    # Calculate OBV and OBV change
     df['OBV'] = ta.volume.on_balance_volume(df.Close, df.Volume)
     df['OBV Change'] = df['OBV'].diff()
     df['OBV'] = df['OBV'].astype('object')
 
+    # Determine buy, sell, hold conditions based on OBV change direction and investment horizon
     if investment_horizon == "Short-term - 1 to 3 years":
         buy_condition = df['OBV Change'] > 0
         sell_condition = df['OBV Change'] < 0
@@ -106,6 +120,7 @@ def On_Balance_Volume(df, investment_horizon):
         buy_condition = False
         sell_condition = False
 
+    # Assign buy, sell, hold labels
     df.loc[buy_condition, 'OBV'] = 'Buy'
     df.loc[sell_condition, 'OBV'] = 'Sell'
     df.loc[~(buy_condition | sell_condition), 'OBV'] = 'Hold'
@@ -114,10 +129,13 @@ def On_Balance_Volume(df, investment_horizon):
     df.loc[df['OBV Change'] > 0, 'OBV Change Direction'] = 'Bullish'
     df.loc[df['OBV Change'] < 0, 'OBV Change Direction'] = 'Bearish'
 
+# Function to analyze Support and Resistance Levels
 def Support_Resistance_Levels(df, investment_horizon):
+    # Calculate support and resistance levels
     df['Support Level'] = df['Low'].rolling(window=20).min()
     df['Resistance Level'] = df['High'].rolling(window=20).max()
 
+    # Determine buy, sell, hold conditions based on investment horizon
     if investment_horizon == "Short-term - 1 to 3 years":
         buy_condition = df.Close > df['Support Level']
         sell_condition = df.Close < df['Resistance Level']
@@ -131,6 +149,7 @@ def Support_Resistance_Levels(df, investment_horizon):
         buy_condition = False
         sell_condition = False
 
+    # Assign buy, sell, hold labels
     df.loc[buy_condition, 'Support Resistance'] = 'Buy'
     df.loc[sell_condition, 'Support Resistance'] = 'Sell'
     df.loc[~(buy_condition | sell_condition), 'Support Resistance'] = 'Hold'
@@ -140,9 +159,10 @@ def Support_Resistance_Levels(df, investment_horizon):
     df['Support'] = df['SMA20'] * 0.95
     df['Resistance'] = df['SMA50'] * 1.05
 
+# Function to generate recommendation results
 def generate_recommendation_results():
+    # Display user input options
     st.subheader("Recommendation Results")
-
     df = pd.DataFrame()
     ticker2 = st.selectbox('Select a stock ticker',
                            ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS',
@@ -194,8 +214,7 @@ def generate_recommendation_results():
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
 
-
-
+# Function to generate recommendations based on technical indicators
 def generate_recommendations(df, risk_tolerance, investment_horizon, investment_style):
     MACDdecision(df, risk_tolerance)
     RSI_SMAdecision(df, investment_horizon)
@@ -203,3 +222,7 @@ def generate_recommendations(df, risk_tolerance, investment_horizon, investment_
     Volume_Analysis(df, risk_tolerance)
     On_Balance_Volume(df, investment_horizon)
     Support_Resistance_Levels(df, investment_horizon)
+
+# Entry point of the Streamlit app
+if __name__ == "__main__":
+    generate_recommendation_results()

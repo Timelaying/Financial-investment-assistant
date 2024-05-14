@@ -1,6 +1,6 @@
 import streamlit as st
 from finvizfinance.news import News as FinvizNews
-from news import render_news as CNBC_news
+from news import render_news as CNBC_news  # Importing a function from a local module
 from finvizfinance.quote import finvizfinance
 from finvizfinance.insider import Insider
 
@@ -67,7 +67,7 @@ def main_news():
     # CNBC News page
     elif selected_option == "CNBC News":
         st.subheader("CNBC News")
-        CNBC_news()
+        CNBC_news()  # Calling a function to render CNBC news
 
     # Insider Trading page
     elif selected_option == "Insider Trading":
