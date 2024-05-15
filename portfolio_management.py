@@ -74,19 +74,19 @@ class Portfolio:
 def portfolio_management(username):
     st.title("Portfolio Management")
     
-    # Initialize portfolio
+    # Initialize portfolio if it doesn't exist in session state
     if 'portfolio' not in st.session_state:
         st.session_state.portfolio = Portfolio()
     
-    # Retrieve existing portfolio data from the database
-    conn = sqlite3.connect('credentials.db')
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM portfolios WHERE username=?", (username,))
-    rows = cursor.fetchall()
-    for row in rows:
-        username_db, _, asset, quantity, price, date_str = row
-        st.session_state.portfolio.add_transaction(username_db, date_str, 'Buy', asset, quantity, price)
-    conn.close()
+        # Retrieve existing portfolio data from the database only if the portfolio is newly created
+        conn = sqlite3.connect('credentials.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM portfolios WHERE username=?", (username,))
+        rows = cursor.fetchall()
+        for row in rows:
+            username_db, _, asset, quantity, price, date_str = row
+            st.session_state.portfolio.add_transaction(username_db, date_str, 'Buy', asset, quantity, price)
+        conn.close()
     
     # Display transaction interface
     st.subheader("Add Transaction")
@@ -124,8 +124,7 @@ def portfolio_management(username):
         # Display portfolio performance chart
         st.plotly_chart(performance_chart)
 
-    #Display Transaction history
+    # Display Transaction history
     st.subheader("Transaction History")
     transaction_history = st.session_state.portfolio.transaction_history()
     st.write(transaction_history)
-

@@ -51,6 +51,9 @@ def Bollinger_Bands(df, investment_style):
     elif investment_style == "Growth Investing":
         buy_condition = df.Close > df['Upper Band']
         sell_condition = df.Close < df['Lower Band']
+    elif investment_style == "Index Investing":  # Include condition for Index Investing
+        buy_condition = df.Close < df['Lower Band'] * 0.95
+        sell_condition = df.Close > df['Upper Band'] * 1.05
     else:
         buy_condition = False
         sell_condition = False
@@ -175,7 +178,7 @@ def generate_recommendation_results():
     if change_preferences == 'Yes':
         risk_tolerance = st.selectbox('Select your risk tolerance', ['High', 'Medium', 'Low'], key='rt')
         investment_horizon = st.selectbox('Select your investment horizon', ['Short-term - 1 to 3 years', 'Medium-term - 3 to 5 years', 'Long-term - 5 years or more'], key='ih')
-        investment_style = st.selectbox('Select your investment style', ['Value Investing', 'Growth Investing', 'Other'], key='is')
+        investment_style = st.selectbox('Select your investment style', ['Value Investing', 'Growth Investing', 'Index Investing'], key='is')
     else:
         # Use default values or previously selected values
         risk_tolerance = st.session_state.form_data['risk_tolerance']

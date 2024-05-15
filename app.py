@@ -27,9 +27,9 @@ if LOGGED_IN:
     # Initialize session state
     if 'form_data' not in st.session_state:
         st.session_state.form_data = { 
-            'risk_tolerance': 'High',
+            'risk_tolerance': 'Medium',
             'investment_horizon': 'Short-term - 1 to 3 years',
-            'investment_style': 'Value Investing'
+            'investment_style': 'Growth Investing'
         }
 
     # Load credentials from JSON file
