@@ -21,6 +21,28 @@ class Portfolio:
             st.warning("Invalid transaction data. Please check your input.")
             return
 
+        if transaction_type == "Sell":
+            # Check if the asset exists in the portfolio for selling
+            asset_exists = any(trans["Asset"] == asset for trans in self.transactions)
+            if not asset_exists:
+                st.warning(f"The asset '{asset}' does not exist in the portfolio for selling.")
+                return
+
+            # Find the latest purchase of the asset to sell
+            latest_purchase = next((trans for trans in reversed(self.transactions) if trans["Asset"] == asset), None)
+            if latest_purchase is None:
+                st.warning(f"No purchase record found for asset '{asset}'.")
+                return
+
+            # Check if the quantity to sell is less than or equal to the available quantity
+            available_quantity = latest_purchase["Quantity"]
+            if quantity > available_quantity:
+                st.warning(f"Quantity to sell ({quantity}) exceeds available quantity ({available_quantity}) for asset '{asset}'.")
+                return
+
+            # Update the quantity to negative for selling
+            quantity *= -1
+
         # Add transaction to the list of transactions
         self.transactions.append({"Username": username, "Date": date_str, "Type": transaction_type, "Asset": asset, "Quantity": quantity, "Price": price})
         # Update portfolio values list with the new portfolio value
@@ -28,10 +50,15 @@ class Portfolio:
         # Connect to database
         conn = sqlite3.connect('credentials.db')
         cursor = conn.cursor()
-        # Insert transaction into the database
-        cursor.execute("INSERT INTO portfolios (username, asset, quantity, price, date) VALUES (?, ?, ?, ?, ?)",
+        # Check if the transaction already exists in the database
+        cursor.execute("SELECT COUNT(*) FROM portfolios WHERE username=? AND asset=? AND quantity=? AND price=? AND date=?",
                        (username, asset, quantity, price, date_str))
-        conn.commit()
+        count = cursor.fetchone()[0]
+        if count == 0:
+            # Insert transaction into the database if it doesn't already exist
+            cursor.execute("INSERT INTO portfolios (username, asset, quantity, price, date) VALUES (?, ?, ?, ?, ?)",
+                           (username, asset, quantity, price, date_str))
+            conn.commit()
         conn.close()
 
     def portfolio_value(self):
@@ -78,27 +105,25 @@ def portfolio_management(username):
     if 'portfolio' not in st.session_state:
         st.session_state.portfolio = Portfolio()
     
-        # Retrieve existing portfolio data from the database only if the portfolio is newly created
-        conn = sqlite3.connect('credentials.db')
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM portfolios WHERE username=?", (username,))
-        rows = cursor.fetchall()
-        for row in rows:
-            username_db, _, asset, quantity, price, date_str = row
-            st.session_state.portfolio.add_transaction(username_db, date_str, 'Buy', asset, quantity, price)
-        conn.close()
+    # Check if the user's data has been loaded
+    if not getattr(st.session_state, 'portfolio_initialized', False):
+        # Load user's data
+        load_user_data(username)
     
     # Display transaction interface
     st.subheader("Add Transaction")
     date_str = st.text_input("Date (YYYY-MM-DD)", value=datetime.today().strftime('%Y-%m-%d'))
     transaction_type = st.selectbox("Transaction Type", ["Buy", "Sell"])
-    asset = st.text_input("Asset")
+    assets = [trans["Asset"] for trans in st.session_state.portfolio.transactions]
+    asset = st.selectbox("Asset", assets) if transaction_type == "Sell" else st.text_input("Asset")
     quantity = st.number_input("Quantity", min_value=0)
     price = st.number_input("Price", min_value=0.01)
 
     if st.button("Add Transaction"):
         # Add transaction to the portfolio
         st.session_state.portfolio.add_transaction(username, date_str, transaction_type, asset, quantity, price)
+        # Reload user's data
+        load_user_data(username)
         st.success("Transaction added successfully.")
 
     # Display portfolio overview, asset allocation, weights, performance, and transaction history
@@ -128,3 +153,23 @@ def portfolio_management(username):
     st.subheader("Transaction History")
     transaction_history = st.session_state.portfolio.transaction_history()
     st.write(transaction_history)
+
+def load_user_data(username):
+    conn = sqlite3.connect('credentials.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM portfolios WHERE username=?", (username,))
+    rows = cursor.fetchall()
+    for row in rows:
+        _, _, asset, quantity, price, date_str = row
+        if quantity > 0:
+            transaction_type = 'Buy'
+        else:
+            transaction_type = 'Sell'
+            # Make quantity positive for consistency
+            quantity = abs(quantity)
+        st.session_state.portfolio.add_transaction(username, date_str, transaction_type, asset, quantity, price)
+    conn.close()
+    st.session_state.portfolio_initialized = True
+
+
+portfolio_management("username")

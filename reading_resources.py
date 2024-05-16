@@ -15,21 +15,18 @@ def render_reading_resources():
         st.subheader(selected_category)
         st.markdown("""
         - [Introduction to Investing](https://www.investopedia.com/articles/investing/082614/how-stock-market-works.asp): Learn the basics of the stock market and how it operates.
-        - [Understanding Stocks](https://www.nerdwallet.com/article/investing/what-are-stocks): Discover what stocks are and how they work as investment vehicles.
-        - [Guide to Mutual Funds](https://www.sec.gov/reportspubs/investor-publications/investorpubsmfintrohtm.html): Get insights into mutual funds and how to invest in them.
-        - [Basics of Bonds](https://www.investor.gov/introduction-investing/basics/investment-products/bonds-or-fixed-income-products): Understand the fundamentals of bonds and fixed-income products.
-        - [ETFs vs. Mutual Funds](https://www.investor.gov/introduction-investing/basics/investment-products/mutual-funds-and-etfs): Learn about the differences between ETFs and mutual funds.
-        - [Diversification: A Risk Management Strategy](https://www.sec.gov/reportspubs/investor-publications/investorpubsdiversificationhtm.html): Explore the concept of diversification as a risk management strategy.
+        - [Understanding Stocks](https://www.nerdwallet.com): Discover what stocks are and how they work as investment vehicles.
+        - [Guide to Mutual Funds](https://www.sec.gov): Get insights into mutual funds and how to invest in them.
+        - [Basics of Bonds](https://www.investor.gov): Understand the fundamentals of bonds and fixed-income products.
         """)
 
     elif selected_category == "Video Tutorials":
         st.subheader(selected_category)
         st.markdown("""
         - [Investing for Beginners](https://www.youtube.com/watch?v=F3QpgXBtDeo): Beginner-friendly tutorial on investing principles.
-        - [How to Choose Stocks](https://www.youtube.com/watch?v=fi7Km2zFfLk): Guidance on selecting stocks for investment.
-        - [Understanding Mutual Funds](https://www.youtube.com/watch?v=2JCYn4CUEQ4): Video explaining mutual funds and their benefits.
-        - [Introduction to Bonds](https://www.youtube.com/watch?v=iTAK3Rt1R1k): Introduction to bonds and bond investing.
-        - [Value Investing Principles](https://www.youtube.com/watch?v=crI4KRqYttM): Learn about value investing strategies.
+        - [Understanding Mutual Funds](https://www.youtube.com/watch?v=JUtes-k-VX4): Video explaining mutual funds and their benefits.
+        - [Introduction to Bonds](https://www.youtube.com/watch?v=vAdn7aLHpO0): Introduction to bonds and bond investing.
+        - [Value Investing Principles](https://www.youtube.com/watch?v=dWDPMD_rCY0): Learn about value investing strategies.
         - [Risk Management Strategies](https://www.youtube.com/watch?v=K6fCnXJ2F24): Explore different risk management techniques for investments.
         """)
 
@@ -59,8 +56,8 @@ def render_reading_resources():
         st.markdown("""
         - [Coursera - Financial Markets](https://www.coursera.org/learn/financial-markets-global): Learn about global financial markets and investment strategies.
         - [Udemy - Investment Management](https://www.udemy.com/course/investment-management/): Comprehensive course covering various aspects of investment management.
-        - [edX - Finance Essentials](https://www.edx.org/learn/finance-essentials): Essential finance concepts and principles taught by industry experts.
-        - [Khan Academy - Investment and Retirement](https://www.khanacademy.org/college-careers-more/personal-finance): Free courses on investment and retirement planning.
-        - [LinkedIn Learning - Investment Strategies](https://www.linkedin.com/learning/investment-strategies/): Develop investment strategies and portfolio management skills.
+        - [edX - Finance Essentials](https://business.edx.org/): Essential finance concepts and principles taught by industry experts.
+        - [Khan Academy - Investment and Retirement](https://www.khanacademy.org/): Free courses on investment and retirement planning.
+        - [LinkedIn Learning - Investment Strategies](https://www.linkedin.com/learning/): Develop investment strategies and portfolio management skills.
         """)
 
