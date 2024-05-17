@@ -22,22 +22,14 @@ class Portfolio:
             return
 
         if transaction_type == "Sell":
-            # Check if the asset exists in the portfolio for selling
-            asset_exists = any(trans["Asset"] == asset for trans in self.transactions)
-            if not asset_exists:
+            # Calculate the total quantity of the asset in the portfolio
+            total_quantity = sum(trans["Quantity"] for trans in self.transactions if trans["Asset"] == asset)
+            if total_quantity <= 0:
                 st.warning(f"The asset '{asset}' does not exist in the portfolio for selling.")
                 return
-
-            # Find the latest purchase of the asset to sell
-            latest_purchase = next((trans for trans in reversed(self.transactions) if trans["Asset"] == asset), None)
-            if latest_purchase is None:
-                st.warning(f"No purchase record found for asset '{asset}'.")
-                return
-
-            # Check if the quantity to sell is less than or equal to the available quantity
-            available_quantity = latest_purchase["Quantity"]
-            if quantity > available_quantity:
-                st.warning(f"Quantity to sell ({quantity}) exceeds available quantity ({available_quantity}) for asset '{asset}'.")
+            
+            if quantity > total_quantity:
+                st.warning(f"Quantity to sell ({quantity}) exceeds available quantity ({total_quantity}) for asset '{asset}'.")
                 return
 
             # Update the quantity to negative for selling
@@ -47,6 +39,7 @@ class Portfolio:
         self.transactions.append({"Username": username, "Date": date_str, "Type": transaction_type, "Asset": asset, "Quantity": quantity, "Price": price})
         # Update portfolio values list with the new portfolio value
         self.portfolio_values.append(self.portfolio_value())
+
         # Connect to database
         conn = sqlite3.connect('credentials.db')
         cursor = conn.cursor()
@@ -114,8 +107,14 @@ def portfolio_management(username):
     st.subheader("Add Transaction")
     date_str = st.text_input("Date (YYYY-MM-DD)", value=datetime.today().strftime('%Y-%m-%d'))
     transaction_type = st.selectbox("Transaction Type", ["Buy", "Sell"])
-    assets = [trans["Asset"] for trans in st.session_state.portfolio.transactions]
-    asset = st.selectbox("Asset", assets) if transaction_type == "Sell" else st.text_input("Asset")
+    
+    if transaction_type == "Sell":
+        # Use a set to remove duplicates
+        assets = list(set(trans["Asset"] for trans in st.session_state.portfolio.transactions if trans["Quantity"] > 0))
+        asset = st.selectbox("Asset", assets)
+    else:
+        asset = st.text_input("Asset")
+    
     quantity = st.number_input("Quantity", min_value=0)
     price = st.number_input("Price", min_value=0.01)
 
@@ -170,6 +169,5 @@ def load_user_data(username):
         st.session_state.portfolio.add_transaction(username, date_str, transaction_type, asset, quantity, price)
     conn.close()
     st.session_state.portfolio_initialized = True
-
 
 portfolio_management("username")
