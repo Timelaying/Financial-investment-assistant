@@ -1,3 +1,5 @@
+# portfolio_management.py
+
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -141,4 +143,5 @@ def load_user_data(username):
     conn.close()
     st.session_state.portfolio_initialized = True
 
-portfolio_management("username")
+if __name__ == "__main__":
+    portfolio_management("username")

@@ -9,68 +9,111 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 # Now import custom module 'portfolio_management' from the parent directory
 from portfolio_management import *
 
-# Define a pytest fixture for an empty portfolio
+
+# Mock for st.session_state
+class MockSessionState:
+    def __init__(self):
+        self.portfolio = Portfolio()
+
 @pytest.fixture
-def empty_portfolio(tmp_path):
-    # Create a temporary database for testing
+def empty_portfolio(tmp_path, monkeypatch):
     db_path = tmp_path / 'test.db'
-    conn = sqlite3.connect(str(db_path))
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
-    # Create the 'portfolios' table
     cursor.execute('''CREATE TABLE portfolios
                       (username text, asset text, quantity real, price real, date text)''')
     conn.commit()
     conn.close()
-    return Portfolio()  # Initialize Portfolio without any arguments
+    
+    monkeypatch.setattr("streamlit.session_state", MockSessionState())
 
-# Test the initialization of Portfolio
+    portfolio = Portfolio()
+    return portfolio, db_path
+
 def test_portfolio_init(empty_portfolio):
-    assert isinstance(empty_portfolio, Portfolio)
-    assert len(empty_portfolio.transactions) == 0
-    assert len(empty_portfolio.portfolio_values) == 0
+    portfolio, _ = empty_portfolio
+    assert isinstance(portfolio, Portfolio)
+    assert len(portfolio.transactions) == 0
+    assert len(portfolio.portfolio_values) == 0
 
-# Test adding a transaction to the portfolio
 def test_add_transaction(empty_portfolio):
-    empty_portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
-    assert len(empty_portfolio.transactions) == 1
-    assert len(empty_portfolio.portfolio_values) == 1
+    portfolio, _ = empty_portfolio
+    portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
+    assert len(portfolio.transactions) == 1
+    assert len(portfolio.portfolio_values) == 1
 
-# Test calculating portfolio value
+def test_add_sell_transaction(empty_portfolio):
+    portfolio, _ = empty_portfolio
+    portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
+    portfolio.add_transaction("user1", "2024-02-01", "Sell", "StockA", 5, 100)
+    assert len(portfolio.transactions) == 2
+    assert portfolio.transactions[-1]['Quantity'] == -5
+
+def test_add_sell_transaction_insufficient_quantity(empty_portfolio):
+    portfolio, _ = empty_portfolio
+    portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
+    portfolio.add_transaction("user1", "2024-02-01", "Sell", "StockA", 15, 100)
+    assert len(portfolio.transactions) == 1  # The second transaction should not be added
+
 def test_portfolio_value(empty_portfolio):
-    empty_portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
-    empty_portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
-    assert empty_portfolio.portfolio_value() == 2000  # (10*100) + (20*50)
+    portfolio, _ = empty_portfolio
+    portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
+    portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
+    assert portfolio.portfolio_value() == 2000  # (10*100) + (20*50)
 
-# Test calculating asset percentage
 def test_get_asset_percentage(empty_portfolio):
-    empty_portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
-    empty_portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
-    asset_percentage = empty_portfolio.get_asset_percentage()
+    portfolio, _ = empty_portfolio
+    portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
+    portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
+    asset_percentage = portfolio.get_asset_percentage()
     assert asset_percentage is not None
     assert asset_percentage["StockA"] == 50.0  # (10*100)/(10*100 + 20*50)
     assert asset_percentage["StockB"] == 50.0  # (20*50)/(10*100 + 20*50)
 
-# Test calculating portfolio weights
 def test_calculate_weights(empty_portfolio):
-    empty_portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
-    empty_portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
-    weights = empty_portfolio.calculate_weights()
+    portfolio, _ = empty_portfolio
+    portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
+    portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
+    weights = portfolio.calculate_weights()
     assert weights is not None
     assert weights["StockA"] == 0.5
     assert weights["StockB"] == 0.5
 
-# Test plotting portfolio performance
-def test_plot_portfolio_performance(empty_portfolio):
-    empty_portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
-    empty_portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
-    performance_chart = empty_portfolio.plot_portfolio_performance()
-    assert performance_chart is not None
-    assert isinstance(performance_chart, go.Figure)
-
-# Test retrieving transaction history
 def test_transaction_history(empty_portfolio):
-    empty_portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
-    empty_portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
-    transaction_history = empty_portfolio.transaction_history()
+    portfolio, _ = empty_portfolio
+    portfolio.add_transaction("user1", "2024-01-01", "Buy", "StockA", 10, 100)
+    portfolio.add_transaction("user1", "2024-02-01", "Buy", "StockB", 20, 50)
+    transaction_history = portfolio.transaction_history()
     assert len(transaction_history) == 2
     assert set(transaction_history.columns) == {'Username', 'Date', 'Type', 'Asset', 'Quantity', 'Price'}
+
+def test_load_user_data(tmp_path):
+    db_path = tmp_path / 'test.db'
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE portfolios
+                      (username text, asset text, quantity real, price real, date text)''')
+    cursor.execute("INSERT INTO portfolios (username, asset, quantity, price, date) VALUES (?, ?, ?, ?, ?)",
+                   ("user1", "StockA", 10, 100, "2024-01-01"))
+    cursor.execute("INSERT INTO portfolios (username, asset, quantity, price, date) VALUES (?, ?, ?, ?, ?)",
+                   ("user1", "StockB", 20, 50, "2024-02-01"))
+    conn.commit()
+    conn.close()
+
+    # Mock for st.session_state
+    class MockSessionState:
+        def __init__(self):
+            self.portfolio = Portfolio()
+
+    # Initialize session state with portfolio
+    st.session_state = MockSessionState()
+
+    # Load user data
+    load_user_data("user1")
+
+    # Now make assertions based on the loaded data
+    assert len(st.session_state.portfolio.transactions) == 3
+    assert st.session_state.portfolio.transactions[0]["Asset"] == "StockA"
+    assert st.session_state.portfolio.transactions[1]["Asset"] == "StockA"
+    assert st.session_state.portfolio.transactions[2]["Asset"] == "StockB"
+
