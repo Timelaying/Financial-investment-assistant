@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import ta
-import pandas_ta
+import yfinance as yf
 
 # Function to make MACD-based decisions
 def MACDdecision(df, risk_tolerance):
@@ -188,7 +188,7 @@ def generate_recommendation_results():
     if st.button("Generate Recommendations"):
         with st.spinner("Fetching and processing data..."):
             try:
-                df = df.ta.ticker(ticker2, period=period, interval=interval)
+                df = yf.Ticker(ticker2).history(period=period, interval=interval)
 
                 generate_recommendations(df, risk_tolerance, investment_horizon, investment_style)
 
