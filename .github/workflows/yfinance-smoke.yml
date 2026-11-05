@@ -1,0 +1,26 @@
+name: yfinance smoke
+on:
+  push:
+    branches: [ "tmp/yfinance-smoke" ]
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.10"
+    - run: pip install yfinance==1.2.0 pandas==2.2.1 numpy==1.26.4
+    - name: Live Yahoo Finance calls used by the app
+      run: |
+        python - <<'PY'
+        import yfinance as yf
+        d = yf.download("AAPL", period="1y", interval="1d", multi_level_index=False, progress=False)
+        print("download:", d.shape, list(d.columns), "Close ndim:", d["Close"].to_numpy().ndim)
+        h = yf.Ticker("AAPL").history(period="1mo", interval="1d")
+        print("history:", h.shape, list(h.columns))
+        assert len(d) > 200, "download returned too few rows"
+        assert d["Close"].to_numpy().ndim == 1, "Close is not 1-D"
+        assert len(h) > 10, "history returned too few rows"
+        print("SMOKE OK")
+        PY
