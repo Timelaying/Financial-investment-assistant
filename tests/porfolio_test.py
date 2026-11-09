@@ -96,12 +96,19 @@ def test_transaction_history(empty_portfolio):
     assert len(transaction_history) == 2
     assert set(transaction_history.columns) == {'Username', 'Date', 'Type', 'Asset', 'Quantity', 'Price'}
 
-def test_load_user_data(tmp_path):
-    db_path = tmp_path / 'test.db'
-    conn = sqlite3.connect(db_path)
+def test_load_user_data(tmp_path, monkeypatch):
+    # load_user_data reads 'credentials.db' from the current directory, so seed a
+    # temporary database with two rows for user1 and run the test inside it.
+    monkeypatch.chdir(tmp_path)
+    conn = sqlite3.connect(tmp_path / 'credentials.db')
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE portfolios
-                      (username text, asset text, quantity real, price real, date text)''')
+                      (id INTEGER PRIMARY KEY,
+                       username TEXT,
+                       asset TEXT,
+                       quantity REAL,
+                       price REAL,
+                       date DATE)''')
     cursor.execute("INSERT INTO portfolios (username, asset, quantity, price, date) VALUES (?, ?, ?, ?, ?)",
                    ("user1", "StockA", 10, 100, "2024-01-01"))
     cursor.execute("INSERT INTO portfolios (username, asset, quantity, price, date) VALUES (?, ?, ?, ?, ?)",
@@ -110,19 +117,13 @@ def test_load_user_data(tmp_path):
     conn.close()
 
     # Mock for st.session_state
-    class MockSessionState:
-        def __init__(self):
-            self.portfolio = Portfolio()
-
-    # Initialize session state with portfolio
-    st.session_state = MockSessionState()
+    monkeypatch.setattr("streamlit.session_state", MockSessionState())
 
     # Load user data
     load_user_data("user1")
 
-    # Now make assertions based on the loaded data
-    assert len(st.session_state.portfolio.transactions) == 3
-    assert st.session_state.portfolio.transactions[0]["Asset"] == "StockA"
-    assert st.session_state.portfolio.transactions[1]["Asset"] == "StockA"
-    assert st.session_state.portfolio.transactions[2]["Asset"] == "StockB"
-
+    # One transaction per stored row, in insertion order
+    transactions = st.session_state.portfolio.transactions
+    assert len(transactions) == 2
+    assert transactions[0]["Asset"] == "StockA"
+    assert transactions[1]["Asset"] == "StockB"
