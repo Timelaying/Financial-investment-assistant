@@ -17,14 +17,23 @@ class MockSessionState:
 
 @pytest.fixture
 def empty_portfolio(tmp_path, monkeypatch):
-    db_path = tmp_path / 'test.db'
+    # portfolio_management opens 'credentials.db' in the current directory, so run
+    # each test in a temporary directory with a fresh database. The schema matches
+    # the portfolios table that app.py creates on startup.
+    monkeypatch.chdir(tmp_path)
+    db_path = tmp_path / 'credentials.db'
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE portfolios
-                      (username text, asset text, quantity real, price real, date text)''')
+                      (id INTEGER PRIMARY KEY,
+                       username TEXT,
+                       asset TEXT,
+                       quantity REAL,
+                       price REAL,
+                       date DATE)''')
     conn.commit()
     conn.close()
-    
+
     monkeypatch.setattr("streamlit.session_state", MockSessionState())
 
     portfolio = Portfolio()
