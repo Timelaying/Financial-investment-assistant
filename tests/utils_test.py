@@ -9,6 +9,27 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Now import custom module 'utils' from the parent directory
 from utils import *
+from argon2 import PasswordHasher
+
+
+@pytest.fixture(autouse=True)
+def isolated_auth_file(tmp_path, monkeypatch):
+    """Run every test in this module against a throwaway _secret_auth_.json.
+
+    The functions under test read and write _secret_auth_.json in the current
+    directory. That file is not in the repository, and register_new_usr appends
+    to it, so the tests use a temporary directory seeded with one test user.
+    """
+    users = [
+        {
+            "username": "username",
+            "name": "Test User",
+            "email": "email@example.com",
+            "password": PasswordHasher().hash("password"),
+        }
+    ]
+    (tmp_path / "_secret_auth_.json").write_text(json.dumps(users))
+    monkeypatch.chdir(tmp_path)
 
 
 # Test the check_usr_pass function

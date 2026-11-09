@@ -20,7 +20,7 @@ class TradingSimulator:
                           ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'FB', 'TSLA', 'JPM', 'V', 'NVDA', 'NFLX', 'DIS',
                            'BABA', 'WMT', 'PG'], key="ticker_selection")  # Unique key for caching
 
-            data = yf.download(ticker, period=period, interval="1d")
+            data = yf.download(ticker, period=period, interval="1d", multi_level_index=False)
             price_data = data['Close'].to_numpy()
         else:
             trend = np.random.normal(0, volatility, num_days)

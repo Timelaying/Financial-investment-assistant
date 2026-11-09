@@ -1,4 +1,5 @@
 import numpy as np  # Importing numpy for numerical operations
+import pandas as pd  # Importing pandas to build the mocked price data
 import pytest  # Importing pytest for testing
 import sys  # Importing sys for system-specific parameters and functions
 import os  # Importing os for operating system dependent functionality
@@ -28,7 +29,10 @@ def test_generate_price_data(simulator):
     data_source = 'historical'
     period = "1y"
     num_days = 252  # Number of trading days in a year
-    price_data = simulator.generate_price_data(num_days, volatility, data_source, period)
+    # yf.download is mocked so the test does not need network access
+    fake_download = pd.DataFrame({'Close': np.linspace(100, 120, num_days)})
+    with patch('trading_simulator.yf.download', return_value=fake_download):
+        price_data = simulator.generate_price_data(num_days, volatility, data_source, period)
     assert len(price_data) == num_days
 
 # Test the simulate_trades function

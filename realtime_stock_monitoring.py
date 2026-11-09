@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score, precision_score
 # Function to fetch historical stock data
 @st.cache
 def get_data(ticker, period="1y"):
-    data = yf.download(ticker, period=period, interval="1d")
+    data = yf.download(ticker, period=period, interval="1d", multi_level_index=False)
     return data
 
 # Function to compute target column for classification
