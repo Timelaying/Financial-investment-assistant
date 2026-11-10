@@ -85,3 +85,12 @@ Contributions are welcome! To propose improvements or report bugs, please open a
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+
+## Deploy on Streamlit Community Cloud
+
+1. Sign in at share.streamlit.io with GitHub and choose **Create app** from this repository, branch `main`, main file `app.py`.
+2. Under **Advanced settings**, select Python 3.11.
+3. Deploy. The first start installs the dependencies and takes a few minutes.
+
+Accounts are stored in local files that Streamlit Cloud does not keep between restarts, so visitors sign up with a new demo account after each restart. `requirements.txt` lists only what the app imports; the old full environment snapshot is no longer used.
