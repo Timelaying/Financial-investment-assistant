@@ -3,6 +3,7 @@ import streamlit as st
 import json
 import sqlite3
 from widgets import __login__
+from safe import render_safely
 
 # Modules for tabs
 from news_in import main_news
@@ -74,22 +75,22 @@ if LOGGED_IN:
         'Management of portfolio'])
     
     with tab1:
-        main_news()  # Function to display main news
+        render_safely('News', main_news)
         
     with tab2:
-        render_realtime_stock_monitoring()  # Function to render real-time stock monitoring
+        render_safely('Market analysis', render_realtime_stock_monitoring)
     
     with tab3:
-        render_trading_simulator()  # Function to render trading simulator
+        render_safely('The trading simulator', render_trading_simulator)
     
     with tab4:
-        render_reading_resources()  # Function to render reading resources
+        render_safely('Reading resources', render_reading_resources)
     
     with tab5:
-        generate_recommendation_results()  # Function to generate recommendation results
+        render_safely('Recommendations', generate_recommendation_results)
     
     with tab6:
-        portfolio_management(username)  # Function to manage portfolio for the logged-in user
+        render_safely('Portfolio management', portfolio_management, username)
 
 else:
     st.warning("Please log in to access Finance Adviser.")

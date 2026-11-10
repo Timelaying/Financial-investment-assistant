@@ -3,13 +3,14 @@ from bs4 import BeautifulSoup
 import streamlit as st
 
 # Cache the function to improve performance
-@st.cache
+@st.cache_data(ttl=600, show_spinner=False)
 def get_news():
     # Define the URL to scrape
     url = 'https://www.cnbc.com/world-markets/'
     
     # Send a GET request to the URL
-    response = requests.get(url)
+    response = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+    response.raise_for_status()
     
     # Parse the HTML content
     soup = BeautifulSoup(response.content, "html.parser")
